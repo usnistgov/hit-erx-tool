@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>hit-base-web</artifactId>
 	<name>hit-base-web</name>
-	<description>Immunization tool</description>
+	<description>ERX tool</description>
 	<packaging>war</packaging>
 	<parent>
 		<groupId>gov.nist.hit.base</groupId>
@@ -224,7 +224,7 @@
 		</dependency>  
    <dependency>
 			<groupId>gov.nist.hit.core.hl7v2</groupId>
-			<artifactId>hit-core-hl7v2-service</artifactId>
+			<artifactId>hit-core-edi-service</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
  
