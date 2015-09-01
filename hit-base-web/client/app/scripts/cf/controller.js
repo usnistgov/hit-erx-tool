@@ -46,7 +46,11 @@ angular.module('cf')
                     return parent && parent != null ? parent.children : $scope.testCases;
                 },
                 getTemplate: function (node) {
-                    return 'CFTestCase.html';
+                    if(!node.testContext || node.testContext === null){
+                        return 'CFTestCase.html';
+                    }else{
+                        return  'CFTestStep.html';
+                    }
                 }
             });
 
@@ -203,7 +207,7 @@ angular.module('cf')
                 readOnly: false,
                 showCursorWhenSelecting: true
             });
-            $scope.editor.setSize(null, 350);
+            $scope.editor.setSize("100%", 350);
 
             $scope.editor.on("keyup", function () {
                 $timeout(function () {
@@ -254,37 +258,28 @@ angular.module('cf')
                     var validated = new MessageValidator().validate(id, content);
                     validated.then(function (mvResult) {
                         $scope.vLoading = false;
-                        $scope.setValidationResult(mvResult);
+                        $scope.loadValidationResult(mvResult);
                     }, function (error) {
                         $scope.vLoading = false;
                         $scope.vError = error;
-                        $scope.setValidationResult(null);
+                        $scope.loadValidationResult(null);
                     });
 
                 } catch (e) {
                     $scope.vLoading = false;
                     $scope.vError = e;
-                    $scope.setValidationResult(null);
+                    $scope.loadValidationResult(null);
                 }
             } else {
-                $scope.setValidationResult(null);
+                $scope.loadValidationResult(null);
                 $scope.vLoading = false;
                 $scope.vError = null;
             }
         };
 
 
-        $scope.setValidationResult = function (mvResult) {
-            var report = null;
-            var validationResult = null;
-            if (mvResult !== null) {
-                report = {};
-                validationResult = new NewValidationResult();
-                validationResult.init(mvResult);
-                report["result"] = validationResult;
-            }
-            $rootScope.$broadcast('cf:reportLoaded', report);
-            $rootScope.$broadcast('cf:validationResultLoaded', validationResult);
+        $scope.loadValidationResult = function (mvResult) {
+            $rootScope.$broadcast('cf:validationResultLoaded', mvResult);
         };
 
 
@@ -369,7 +364,7 @@ angular.module('cf')
             $scope.mError = null;
             $scope.vError = null;
             $scope.initCodemirror();
-            $scope.setValidationResult(null);
+            $scope.loadValidationResult(null);
             $scope.$on('cf:refreshEditor', function (event) {
                 $scope.refreshEditor();
                 event.preventDefault();
