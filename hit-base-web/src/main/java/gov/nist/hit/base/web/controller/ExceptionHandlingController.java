@@ -57,7 +57,7 @@ public class ExceptionHandlingController {
   @ExceptionHandler(MessageValidationException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public String messageValidationException(MessageValidationException ex) {
-    logger.debug(ex.getMessage());
+    logger.debug(ex.getMessage(),ex);
     ex.printStackTrace();
     return "Sorry, validation failed \n";
   }
@@ -65,15 +65,15 @@ public class ExceptionHandlingController {
 
   @ExceptionHandler(MessageParserException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public String MessageParserException(MessageValidationException ex) {
-    logger.debug(ex.getMessage());
+  public String MessageParserException(MessageParserException ex) {
+    logger.debug(ex.getMessage(),ex);
     return "Sorry, message parsing failed: \n";
   }
 
   @ExceptionHandler(ValidationReportException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public String reportException(ValidationReportException ex) {
-    logger.debug(ex.getMessage());
+    logger.debug(ex.getMessage(),ex);
     return "Sorry, exporting the report Failed.\n";
   }
 
