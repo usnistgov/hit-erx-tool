@@ -70,6 +70,13 @@
 
 	</build>
 
+	<dependencies>
+		<dependency>
+			<groupId>gov.nist.hit.erx</groupId>
+  			<artifactId>hit-erx-tool-config</artifactId>
+  			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
 <!-- 	<dependencies>
 		<dependency>
 			<groupId>gov.nist.hit.example</groupId>
