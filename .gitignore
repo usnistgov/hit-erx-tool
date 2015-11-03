@@ -6,3 +6,5 @@ hit-base-web/target
 .project
 .classpath
 .settings/
+.idea
+*.iml
