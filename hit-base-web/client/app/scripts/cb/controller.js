@@ -372,7 +372,7 @@ angular.module('cb')
                                             var receivedMessage = parseRequest(incoming);
                                             CBExecutionService.setExecutionMessage($scope.testStep, receivedMessage);
                                             $timeout(function () {
-                                                $scope.$broadcast('isolated:setEditorContent', receivedMessage);
+                                                $scope.$broadcast('cb:setEditorContent', receivedMessage);
                                             });
                                         } catch (error) {
                                             $scope.error = errors[2];
@@ -715,6 +715,43 @@ angular.module('cb')
             }
         };
 
+
+
+        $scope.options = {
+//            acceptFileTypes: /(\.|\/)(txt|text|hl7|json)$/i,
+            paramName: 'file',
+            formAcceptCharset: 'utf-8',
+            autoUpload: true,
+            type: 'POST'
+        };
+
+        $scope.$on('fileuploadadd', function (e, data) {
+            if (data.autoUpload || (data.autoUpload !== false &&
+                $(this).fileupload('option', 'autoUpload'))) {
+                data.process().done(function () {
+                    var fileName = data.files[0].name;
+                    data.url = 'api/message/upload';
+                    var jqXHR = data.submit()
+                        .success(function (result, textStatus, jqXHR) {
+                            $scope.nodelay = true;
+                            var tmp = angular.fromJson(result);
+                            $scope.cb.message.name = fileName;
+                            $scope.cb.editor.instance.doc.setValue(tmp.content);
+                            $scope.mError = null;
+                            $scope.execute();
+                        })
+                        .error(function (jqXHR, textStatus, errorThrown) {
+                            $scope.cb.message.name = fileName;
+                            $scope.mError = 'Sorry, Cannot upload file: ' + fileName + ", Error: " + errorThrown;
+                        })
+                        .complete(function (result, textStatus, jqXHR) {
+
+                        });
+                });
+            }
+        });
+
+
         $scope.setLoadRate = function (value) {
             $scope.loadRate = value;
         };
@@ -901,6 +938,14 @@ angular.module('cb')
             $scope.vError = null;
             $scope.setValidationReport(null);
         };
+
+
+        $scope.removeDuplicates = function () {
+            $scope.vLoading = true;
+            $scope.$broadcast('cb:removeDuplicates');
+        };
+
+
 
         $scope.init = function () {
             $scope.clear();
