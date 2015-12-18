@@ -10,6 +10,7 @@
 	<modules>
  		<module>hit-base-service</module>
  		<module>hit-base-web</module>
+		<module>hit-base-ws</module>
 	</modules>
 
 	<properties>

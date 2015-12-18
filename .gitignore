@@ -8,3 +8,4 @@ hit-base-web/target
 .settings/
 .idea
 *.iml
+hit-base-ws/target
