@@ -19,7 +19,7 @@ import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.service.exception.UserTokenIdNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.core.transport.service.TransportClient;
-import gov.nist.hit.iz.service.util.ConnectivityUtil;
+import gov.nist.hit.erx.service.utils.ConnectivityUtil;
 import gov.nist.hit.erx.web.utils.Utils;
 
 import java.io.IOException;
@@ -99,7 +99,7 @@ public class RestTransportController {
         config =
                 transportConfigService.findOneByUserAndProtocolAndDomain(user.getId(), PROTOCOL, DOMAIN);
         if (config == null) {
-            config = transportConfigService.create("soap");
+            config = transportConfigService.create("rest");
             user.addConfig(config);
         }
         if (config.getSutInitiator().get("password") == null
@@ -217,6 +217,16 @@ public class RestTransportController {
         } catch (Exception e1) {
             throw new TransportClientException("Failed to send the message." + e1.getMessage());
         }
+    }
+
+    @Transactional()
+    @RequestMapping(value = "/message", method = RequestMethod.POST)
+    public void message(@RequestBody SendRequest request){
+        //TODO check auth
+        String username = "test";
+        String password = "pass";
+
+        //return null;
     }
 
     public TransactionRepository getTransactionRepository() {
