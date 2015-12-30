@@ -16,6 +16,9 @@ angular.module('commonServices').factory('StorageService',
             CB_LOADED_TESTCASE_TYPE_KEY: 'CB_LOADED_TESTCASE_TYPE',
             CB_LOADED_TESTSTEP_TYPE_KEY: 'CB_LOADED_TESTSTEP_TYPE_KEY',
             CB_LOADED_TESTSTEP_ID_KEY: 'CB_LOADED_TESTSTEP_ID',
+
+            TRANSPORT_CONFIG_KEY: 'TRANSPORT_CONFIG_KEY',
+
             SENDER_USERNAME_KEY: 'SENDER_USERNAME',
             SENDER_PWD_KEY: 'SENDER_PWD',
             SENDER_ENDPOINT_KEY: 'SENDER_ENDPOINT',
@@ -27,6 +30,8 @@ angular.module('commonServices').factory('StorageService',
             ACTIVE_SUB_TAB_KEY: 'ACTIVE_SUB_TAB',
             CB_TESTCASE_LOADED_RESULT_MAP_KEY:'CB_TESTCASE_LOADED_RESULT_MAP_KEY',
             SETTINGS_KEY: 'SETTINGS_KEY',
+            USER_KEY: 'USER_KEY',
+            USER_CONFIG_KEY: 'USER_CONFIG_KEY',
 
 //            SENDER_USERNAME_KEY: 'SENDER_USERNAME',
 //            SENDER_PWD_KEY: 'SENDER_PWD',
@@ -59,6 +64,7 @@ angular.module('commonServices').factory('StorageService',
         return service;
     }]
 );
+
 
 
 

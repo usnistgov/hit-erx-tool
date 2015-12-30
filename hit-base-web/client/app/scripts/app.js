@@ -124,13 +124,12 @@ app.factory('ErrorInterceptor', function ($q, $rootScope, $location, StorageServ
 
 });
 
-app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, StorageService, $route, $window,$sce,$templateCache) {
+app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, StorageService, $route, $window, $sce, $templateCache, UserService, User) {
     $rootScope.appInfo = {};
     $rootScope.stackPosition = 0;
     $rootScope.scrollbarWidth = null;
 
-
-    new AppInfo().then(function (appInfo) {
+    AppInfo.get().then(function (appInfo) {
         $rootScope.appInfo = appInfo;
         httpHeaders.common['csrfToken'] = appInfo.csrfToken;
         httpHeaders.common['dTime'] = appInfo.date;
@@ -138,7 +137,18 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
         $rootScope.appInfo = {};
         $rootScope.openErrorDlg();
     });
-
+    if(StorageService.get(StorageService.USER_KEY) == null) {
+        UserService.create().then(function (info) {
+            User.info = info;
+            StorageService.set(StorageService.USER_KEY,info);
+        }, function (error) {
+            User.info = null;
+            StorageService.remove(StorageService.USER_KEY);
+            $rootScope.openErrorDlg();
+        });
+    }else{
+        User.info = angular.fromJson(StorageService.get(StorageService.USER_KEY));
+    };
 
     $rootScope.$watch(function () {
         return $location.path();
@@ -328,8 +338,8 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
     $rootScope.showSettings = function () {
         var modalInstance = $modal.open({
             templateUrl: 'SettingsCtrl.html',
-            size:'lg',
-            keyboard:'false',
+            size: 'lg',
+            keyboard: 'false',
             controller: 'SettingsCtrl'
         });
     };
@@ -339,16 +349,16 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
         var vcModalInstance = $modal.open({
             templateUrl: 'VersionChangeCtrl.html',
             size: 'lg',
-            backdrop:true,
+            backdrop: true,
             keyboard: 'false',
             'controller': 'VersionChangeCtrl'
         });
         vcModalInstance.result.then(function () {
             $rootScope.clearSession();
-             $rootScope.index();
+            $rootScope.index();
         }, function () {
             $rootScope.clearSession();
-             $rootScope.index();
+            $rootScope.index();
         });
     };
 
@@ -388,10 +398,10 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
     $rootScope.openInvalidReqDlg = function () {
         $rootScope.blankPage();
 
-         var irModalInstance = $modal.open({
+        var irModalInstance = $modal.open({
             templateUrl: 'InvalidReqCtrl.html',
             size: 'lg',
-            backdrop:true,
+            backdrop: true,
             keyboard: 'false',
             'controller': 'InvalidReqCtrl'
         });
@@ -406,10 +416,10 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
 
     $rootScope.openNotFoundDlg = function () {
         $rootScope.blankPage();
-         var nfModalInstance = $modal.open({
+        var nfModalInstance = $modal.open({
             templateUrl: 'NotFoundCtrl.html',
             size: 'lg',
-            backdrop:true,
+            backdrop: true,
             keyboard: 'false',
             'controller': 'NotFoundCtrl'
         });
@@ -428,7 +438,7 @@ app.run(function ($rootScope, $location, $modal, TestingSettings, AppInfo, Stora
 //    });
 
     $rootScope.pettyPrintType = function (type) {
-        return type === 'TestStep' ? 'Test Step': type === 'TestCase'? 'Test Case':type;
+        return type === 'TestStep' ? 'Test Step' : type === 'TestCase' ? 'Test Case' : type;
     };
 
 
@@ -500,34 +510,6 @@ app.directive('stRatio', function () {
 
 });
 
-
-angular.module('hit-tool-services').factory('AppInfo', ['$http', '$q', function ($http, $q) {
-    return function () {
-        var delay = $q.defer();
-        $http.get('api/appInfo').then(
-            function (object) {
-                delay.resolve(angular.fromJson(object.data));
-            },
-            function (response) {
-                delay.reject(response.data);
-            }
-        );
-
-
-//        $http.get('../../resources/appInfo.json').then(
-//            function (object) {
-//                delay.resolve(angular.fromJson(object.data));
-//            },
-//            function (response) {
-//                delay.reject(response.data);
-//            }
-//        );
-
-        return delay.promise;
-    };
-}]);
-
-
 app.controller('TableFoundCtrl', function ($scope, $modalInstance, table) {
     $scope.table = table;
     $scope.tmpTableElements = [].concat(table != null ? table.valueSetElements : []);
@@ -535,7 +517,6 @@ app.controller('TableFoundCtrl', function ($scope, $modalInstance, table) {
         $modalInstance.dismiss('cancel');
     };
 });
-
 
 
 app.controller('ValidationResultInfoCtrl', [ '$scope', '$modalInstance',
@@ -546,8 +527,8 @@ app.controller('ValidationResultInfoCtrl', [ '$scope', '$modalInstance',
     }
 ]);
 
-app.filter('capitalize', function() {
-    return function(input) {
+app.filter('capitalize', function () {
+    return function (input) {
         return (!!input) ? input.charAt(0).toUpperCase() + input.substr(1).toLowerCase() : '';
     }
 });
