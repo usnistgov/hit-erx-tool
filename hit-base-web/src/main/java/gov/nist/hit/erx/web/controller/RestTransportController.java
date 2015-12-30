@@ -1,47 +1,29 @@
 package gov.nist.hit.erx.web.controller;
 
 
-import gov.nist.hit.core.domain.KeyValuePair;
-import gov.nist.hit.core.domain.SendRequest;
-import gov.nist.hit.core.domain.TestStep;
-import gov.nist.hit.core.domain.TestStepTestingType;
-import gov.nist.hit.core.domain.Transaction;
-import gov.nist.hit.core.domain.TransportConfig;
-import gov.nist.hit.core.domain.User;
+import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
 import gov.nist.hit.core.repo.TransactionRepository;
 import gov.nist.hit.core.repo.UserRepository;
 import gov.nist.hit.core.service.TestStepService;
 import gov.nist.hit.core.service.TransportConfigService;
-import gov.nist.hit.core.service.exception.DuplicateTokenIdException;
 import gov.nist.hit.core.service.exception.TestCaseException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
-import gov.nist.hit.core.service.exception.UserTokenIdNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.core.transport.service.TransportClient;
-import gov.nist.hit.erx.service.utils.ConnectivityUtil;
 import gov.nist.hit.erx.web.utils.Utils;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-
-import org.apache.commons.io.IOUtils;
+import gov.nist.hit.erx.ws.client.WebServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -49,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 
 @RestController
+@Controller
 @RequestMapping("/transport/erx/rest")
 public class RestTransportController {
 
@@ -67,8 +50,8 @@ public class RestTransportController {
     protected TransportConfigService transportConfigService;
 
     @Autowired
-    private TransportClient transportClient;
-
+    @Qualifier("WebServiceClient")
+    protected WebServiceClient webServiceClient;
 
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "rest";
@@ -78,12 +61,8 @@ public class RestTransportController {
     /*@Autowired
     protected SOAPSecurityFaultCredentialsRepository securityFaultCredentialsRepository;*/
 
-    String SUMBIT_SINGLE_MESSAGE_TEMPLATE = null;
-
     public RestTransportController() throws IOException {
-        SUMBIT_SINGLE_MESSAGE_TEMPLATE =
-                IOUtils.toString(IsolatedTestingController.class
-                        .getResourceAsStream("/templates/SubmitSingleMessage.xml"));
+
     }
 
     @Transactional()
@@ -120,7 +99,7 @@ public class RestTransportController {
 
         if (config.getSutInitiator().get("endpoint") == null) {
             List<KeyValuePair> pairs = new ArrayList<KeyValuePair>();
-            pairs.add(new KeyValuePair("endpoint", Utils.getUrl(request) + "/ws/iisService"));
+            pairs.add(new KeyValuePair("endpoint", Utils.getUrl(request) + "/message"));
             transportConfigService.set(pairs, TestStepTestingType.SUT_INITIATOR, config);
         }
         userRepository.save(user);
@@ -134,7 +113,7 @@ public class RestTransportController {
                 + " and of test step with id=" + request.getTestStepId());
         Transaction transaction = transaction(request);
         if (transaction != null) {
-            transaction.init();;
+            transaction.init();
             transactionRepository.saveAndFlush(transaction);
             return true;
         }
@@ -192,12 +171,8 @@ public class RestTransportController {
             if (testStep == null)
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
             String outgoingMessage = request.getMessage();
-            /*outgoingMessage =
-                    ConnectivityUtil.updateSubmitSingleMessageRequest(SUMBIT_SINGLE_MESSAGE_TEMPLATE,
-                            request.getMessage(), request.getConfig().get("username"),
-                            request.getConfig().get("password"));*/
             String incomingMessage =
-                    transportClient.send(outgoingMessage, request.getConfig().get("username"),request.getConfig().get("password"),request.getConfig().get("endpoint"));
+                    webServiceClient.send(outgoingMessage, request.getConfig().get("username"),request.getConfig().get("password"),request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
             try {
                 incomingMessage = XmlUtil.prettyPrint(incomingMessage);
@@ -227,6 +202,14 @@ public class RestTransportController {
         String password = "pass";
 
         //return null;
+    }
+
+    @Transactional()
+    @RequestMapping(value = "/test", method = RequestMethod.POST)
+    public String test(@RequestBody SendRequest request,@RequestParam String username){
+        //TODO check auth
+        String password = "pass";
+        return "hello "+username;
     }
 
     public TransactionRepository getTransactionRepository() {

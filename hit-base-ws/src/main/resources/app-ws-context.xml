@@ -28,7 +28,7 @@ http://www.springframework.org/schema/oxm http://www.springframework.org/schema/
         <property name="exceptionMappings">
             <map>
                 <entry key="org.springframework.oxm.ValidationFailureException" value="CLIENT,Invalid request"/>
-                <entry key="gov.nist.hit.iz.ws.server.exception.MessageTooLargeException" value="SENDER"/>
+                <entry key="gov.nist.hit.erx.ws.server.exception.MessageTooLargeException" value="SENDER"/>
                 <entry key="java.lang.UnsupportedOperationException" value="SENDER" />
                 <entry key="java.lang.SecurityException" value="SENDER" />
                 <entry key="gov.nist.hit.core.transport.TransportServerException" value="SENDER"/>
@@ -37,10 +37,9 @@ http://www.springframework.org/schema/oxm http://www.springframework.org/schema/
     </bean>
 
     <bean id="webServiceClient" class="gov.nist.hit.erx.ws.client.WebServiceClient">
-        <constructor-arg name="webServiceTemplate" ref="webServiceTemplate" />
     </bean>
 
-
+    <context:component-scan base-package="gov.nist"/>
 
 
 </beans>
