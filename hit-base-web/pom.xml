@@ -1,18 +1,18 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<artifactId>hit-erx-web</artifactId>
-	<name>hit-erx-web</name>
-	<description>hit-erx tool</description>
+	<artifactId>hit-base-web</artifactId>
+	<name>hit-base-web</name>
+	<description>hit-base tool</description>
 	<packaging>war</packaging>
 	<parent>
-		<groupId>gov.nist.hit.erx</groupId>
-		<artifactId>hit-erx-tool</artifactId>
+		<groupId>gov.nist.hit.base</groupId>
+		<artifactId>hit-base-tool</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
 	</parent>
 
 	<build>
-		<finalName>hit-erx-tool</finalName>
+		<finalName>hit-base-tool</finalName>
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -86,13 +86,13 @@
 		</dependency>
 
 		<dependency>
-			<groupId>gov.nist.hit.erx</groupId>
-			<artifactId>hit-erx-service</artifactId>
+			<groupId>gov.nist.hit.base</groupId>
+			<artifactId>hit-base-service</artifactId>
 			<version>${parent.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>gov.nist.hit.erx</groupId>
+			<groupId>gov.nist.hit.base</groupId>
 			<artifactId>hit-erx-ws</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
