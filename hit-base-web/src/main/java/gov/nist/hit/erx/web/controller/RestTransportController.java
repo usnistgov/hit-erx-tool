@@ -205,8 +205,8 @@ public class RestTransportController {
     }
 
     @Transactional()
-    @RequestMapping(value = "/test", method = RequestMethod.POST)
-    public String test(@RequestBody SendRequest request,@RequestParam String username){
+    @RequestMapping(value = "/test", method = RequestMethod.GET)
+    public String test(@RequestParam String username){
         //TODO check auth
         String password = "pass";
         return "hello "+username;
