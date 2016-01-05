@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -56,45 +58,58 @@ public class RestTransportController {
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "rest";
 
-
-
-    /*@Autowired
-    protected SOAPSecurityFaultCredentialsRepository securityFaultCredentialsRepository;*/
-
-    public RestTransportController() throws IOException {
-
-    }
-
     @Transactional()
-    @RequestMapping(value = "/configListener", method = RequestMethod.POST)
-    public TransportConfig config(@RequestParam("userId") final Long userId,
-                                  HttpServletRequest request) throws UserNotFoundException {
-        logger.info("Fetching user information ... ");
+    @RequestMapping(value = "/user/{userId}/taInitiator", method = RequestMethod.POST)
+    public Map<String, String> taInitiatorConfig(@PathVariable("userId") final Long userId)
+            throws UserNotFoundException {
+        logger.info("Fetching user ta initiator information ... ");
         User user = null;
-        TransportConfig config = null;
+        TransportConfig transportConfig = null;
         if (userId == null || (user = userRepository.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
-        config =
-                transportConfigService.findOneByUserAndProtocolAndDomain(user.getId(), PROTOCOL, DOMAIN);
-        if (config == null) {
-            config = transportConfigService.create("rest");
-            user.addConfig(config);
+        transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
+        if (transportConfig == null) {
+            transportConfig = transportConfigService.create(PROTOCOL);
+            user.addConfig(transportConfig);
+            userRepository.save(user);
+            transportConfigService.save(transportConfig);
         }
-        if (config.getSutInitiator().get("password") == null
-                && config.getSutInitiator().get("username") == null) {
-            List<KeyValuePair> pairs = new ArrayList<KeyValuePair>();
-            pairs.add(new KeyValuePair("username", "vendor_" + config.getId()));
-            pairs.add(new KeyValuePair("password", "vendor_" + config.getId()));
-            transportConfigService.set(pairs, TestStepTestingType.SUT_INITIATOR, config);
+        Map<String, String> config = transportConfig.getTaInitiator();
+        return config;
+    }
+
+    @Transactional()
+    @RequestMapping(value = "/user/{userId}/sutInitiator", method = RequestMethod.POST)
+    public Map<String, String> sutInitiatorConfig(@PathVariable("userId") final Long userId,
+                                                  HttpServletRequest request) throws UserNotFoundException {
+        logger.info("Fetching user information ... ");
+        User user = null;
+        TransportConfig transportConfig = null;
+        if (userId == null || (user = userRepository.findOne(userId)) == null) {
+            throw new UserNotFoundException();
+        }
+        transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
+        if (transportConfig == null) {
+            transportConfig = transportConfigService.create(PROTOCOL);
+            user.addConfig(transportConfig);
+            userRepository.save(user);
+        }
+        Map<String, String> config = transportConfig.getSutInitiator();
+        if (config == null) {
+            config = new HashMap<String, String>();
+            transportConfig.setSutInitiator(config);
         }
 
-        if (config.getSutInitiator().get("endpoint") == null) {
-            List<KeyValuePair> pairs = new ArrayList<KeyValuePair>();
-            pairs.add(new KeyValuePair("endpoint", Utils.getUrl(request) + "/message"));
-            transportConfigService.set(pairs, TestStepTestingType.SUT_INITIATOR, config);
+        if (config.get("password") == null && config.get("username") == null) {
+            config.put("username", "vendor_" + user.getId());
+            config.put("password", "vendor_" + user.getId());
         }
-        userRepository.save(user);
+
+        if (config.get("endpoint") == null) {
+            config.put("endpoint", Utils.getUrl(request) + "/message");
+        }
+        transportConfigService.save(transportConfig);
         return config;
     }
 
@@ -103,51 +118,41 @@ public class RestTransportController {
     public boolean open(@RequestBody SendRequest request)  throws UserNotFoundException {
         logger.info("Open transaction for user with id=" + request.getUserId()
                 + " and of test step with id=" + request.getTestStepId());
-        Transaction transaction = transaction(request);
-        if (transaction != null && transaction.getUser() != null) {
-            transaction.init();
-            transactionRepository.saveAndFlush(transaction);
-            return true;
+        Transaction transaction = searchTransaction(request);
+        if (transaction == null) {
+            transaction = new Transaction();
+            transaction.setTestStep(testStepService.findOne(request.getTestStepId()));
+            transaction.setUser(userRepository.findOne(request.getUserId()));
+            transaction.setConfig(request.getConfig());
+            transaction.setResponseMessageId(request.getResponseMessageId());
+            transactionRepository.save(transaction);
         }
+        transaction.init();;
+        transactionRepository.saveAndFlush(transaction);
         return false;
     }
-
-    // private void setResponseMessageId(TransportAccount transportAccount, String messageId) {
-    // transportAccount.getInfo().put("responseMessageId", messageId);
-    // transportAccountRepository.save(transportAccount);
-    // }
 
     @Transactional()
     @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
     public boolean close(@RequestBody SendRequest request)  throws UserNotFoundException {
         logger.info("Closing transaction for user with id=" + request.getUserId()
                 + " and of test step with id=" + request.getTestStepId());
-        Transaction transaction = transaction(request);
+        Transaction transaction = searchTransaction(request);
         if (transaction != null) {
-            // setResponseMessageId(transaction.getTransportAccount(), null);
             transaction.close();
             transactionRepository.saveAndFlush(transaction);
         }
         return true;
     }
 
-    @RequestMapping(value = "/transaction", method = RequestMethod.POST)
-    public Transaction transaction(@RequestBody SendRequest request) throws UserNotFoundException {
+    @RequestMapping(value = "/searchTransaction", method = RequestMethod.POST)
+    public Transaction searchTransaction(@RequestBody SendRequest request) {
         logger.info("Get transaction of user with id=" + request.getUserId()
                 + " and of testStep with id=" + request.getTestStepId());
-        Transaction transaction =
-                transactionRepository
-                        .findOneByUserAndTestStep(request.getUserId(), request.getTestStepId());
-        if (transaction == null) {
-            transaction = new Transaction();
-            transaction.setTestStep(testStepService.findOne(request.getTestStepId()));
-            transaction.setUser(userRepository.findOne(request.getUserId()));
-            if(transaction.getUser()!=null)
-                transactionRepository.save(transaction);
-            else {
-                throw new UserNotFoundException();
-            }
-        }
+        List<KeyValuePair> criteria = new ArrayList<KeyValuePair>();
+        criteria.add(new KeyValuePair("username", request.getConfig().get("username")));
+        criteria.add(new KeyValuePair("password", request.getConfig().get("password")));
+        Transaction transaction = transactionRepository.findOneByCriteria(criteria);
         return transaction;
     }
 
