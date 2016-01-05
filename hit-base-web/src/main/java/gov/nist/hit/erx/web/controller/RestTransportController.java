@@ -89,14 +89,6 @@ public class RestTransportController {
             transportConfigService.set(pairs, TestStepTestingType.SUT_INITIATOR, config);
         }
 
-        if (config.getSutInitiator().get("faultPassword") == null
-                && config.getSutInitiator().get("faultUsername") == null) {
-            List<KeyValuePair> pairs = new ArrayList<KeyValuePair>();
-            pairs.add(new KeyValuePair("faultUsername", "faultUser_" + config.getId()));
-            pairs.add(new KeyValuePair("faultPassword", "faultUser_" + config.getId()));
-            transportConfigService.set(pairs, TestStepTestingType.SUT_INITIATOR, config);
-        }
-
         if (config.getSutInitiator().get("endpoint") == null) {
             List<KeyValuePair> pairs = new ArrayList<KeyValuePair>();
             pairs.add(new KeyValuePair("endpoint", Utils.getUrl(request) + "/message"));
@@ -108,11 +100,11 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/startListener", method = RequestMethod.POST)
-    public boolean open(@RequestBody SendRequest request) {
+    public boolean open(@RequestBody SendRequest request)  throws UserNotFoundException {
         logger.info("Open transaction for user with id=" + request.getUserId()
                 + " and of test step with id=" + request.getTestStepId());
         Transaction transaction = transaction(request);
-        if (transaction != null) {
+        if (transaction != null && transaction.getUser() != null) {
             transaction.init();
             transactionRepository.saveAndFlush(transaction);
             return true;
@@ -127,7 +119,7 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
-    public boolean close(@RequestBody SendRequest request) {
+    public boolean close(@RequestBody SendRequest request)  throws UserNotFoundException {
         logger.info("Closing transaction for user with id=" + request.getUserId()
                 + " and of test step with id=" + request.getTestStepId());
         Transaction transaction = transaction(request);
@@ -140,7 +132,7 @@ public class RestTransportController {
     }
 
     @RequestMapping(value = "/transaction", method = RequestMethod.POST)
-    public Transaction transaction(@RequestBody SendRequest request) {
+    public Transaction transaction(@RequestBody SendRequest request) throws UserNotFoundException {
         logger.info("Get transaction of user with id=" + request.getUserId()
                 + " and of testStep with id=" + request.getTestStepId());
         Transaction transaction =
@@ -150,7 +142,11 @@ public class RestTransportController {
             transaction = new Transaction();
             transaction.setTestStep(testStepService.findOne(request.getTestStepId()));
             transaction.setUser(userRepository.findOne(request.getUserId()));
-            transactionRepository.save(transaction);
+            if(transaction.getUser()!=null)
+                transactionRepository.save(transaction);
+            else {
+                throw new UserNotFoundException();
+            }
         }
         return transaction;
     }
@@ -196,12 +192,10 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
-    public void message(@RequestBody SendRequest request){
+    public String message(@RequestBody SendRequest request) throws TransportClientException {
         //TODO check auth
-        String username = "test";
-        String password = "pass";
-
-        //return null;
+        logger.debug("Send message request received : "+request.toString());
+        return this.webServiceClient.send(request.getMessage(),"username","password",request.getConfig().get("endpoint"));
     }
 
     @Transactional()
