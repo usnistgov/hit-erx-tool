@@ -1,12 +1,11 @@
 package gov.nist.hit.erx.web.controller;
 
 
+import com.google.gson.Gson;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
-import gov.nist.hit.core.repo.TransactionRepository;
 import gov.nist.hit.core.repo.UserRepository;
-import gov.nist.hit.core.service.TestStepService;
-import gov.nist.hit.core.service.TransportConfigService;
+import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.exception.TestCaseException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
@@ -21,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,10 +43,16 @@ public class RestTransportController {
     protected UserRepository userRepository;
 
     @Autowired
-    protected TransactionRepository transactionRepository;
+    protected TransactionService transactionService;
 
     @Autowired
     protected TransportConfigService transportConfigService;
+
+    @Autowired
+    protected TransportMessageService transportMessageService;
+
+    @Autowired
+    protected UserService userService;
 
     @Autowired
     @Qualifier("WebServiceClient")
@@ -107,7 +110,7 @@ public class RestTransportController {
         }
 
         if (config.get("endpoint") == null) {
-            config.put("endpoint", Utils.getUrl(request) + "/message");
+            config.put("endpoint", Utils.getUrl(request) + "/api/transport/" + DOMAIN + "/" + PROTOCOL + "/message");
         }
         transportConfigService.save(transportConfig);
         return config;
@@ -115,57 +118,72 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/startListener", method = RequestMethod.POST)
-    public boolean open(@RequestBody SendRequest request)  throws UserNotFoundException {
-        logger.info("Open transaction for user with id=" + request.getUserId()
-                + " and of test step with id=" + request.getTestStepId());
-        Transaction transaction = searchTransaction(request);
-        if (transaction == null) {
-            transaction = new Transaction();
-            transaction.setTestStep(testStepService.findOne(request.getTestStepId()));
-            transaction.setUser(userRepository.findOne(request.getUserId()));
-            transaction.setConfig(request.getConfig());
-            transaction.setResponseMessageId(request.getResponseMessageId());
-            transactionRepository.save(transaction);
-        }
-        transaction.init();;
-        transactionRepository.saveAndFlush(transaction);
-        return false;
+    public boolean startListener(@RequestBody TransportRequest request)  throws UserNotFoundException {
+        stopListener(request);
+        logger.info("Starting listener for user with id=" + request.getUserId());
+        if (request.getResponseMessageId() == null)
+            throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
+        TransportMessage transportMessage = new TransportMessage();
+        transportMessage.setMessageId(request.getResponseMessageId());
+        transportMessage.setProperties(request.getConfig());
+        transportMessageService.save(transportMessage);
+        return true;
+    }
+
+    private Map<String, String> getSutInitiatorConfig(Long userId) {
+        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
+        Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
+        if (sutInitiator == null || sutInitiator.isEmpty())
+            throw new gov.nist.hit.core.service.exception.TransportException(
+                    "No System Under Test configuration info found");
+        return sutInitiator;
     }
 
     @Transactional()
     @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
-    public boolean close(@RequestBody SendRequest request)  throws UserNotFoundException {
-        logger.info("Closing transaction for user with id=" + request.getUserId()
-                + " and of test step with id=" + request.getTestStepId());
-        Transaction transaction = searchTransaction(request);
+    public boolean stopListener(@RequestBody TransportRequest request)  throws UserNotFoundException {
+        logger.info("Stopping listener for user with id=" + request.getUserId());
+
+        if (request.getUserId() == null)
+            throw new gov.nist.hit.core.service.exception.TransportException("User info not found");
+
+        if (!userExist(request.getUserId()))
+            throw new gov.nist.hit.core.service.exception.TransportException(
+                    "We couldn't recognize the user");
+
+        Map<String, String> config = getSutInitiatorConfig(request.getUserId());
+        TransportMessage transportMessage = transportMessageService.findOneByProperties(config);
+        if (transportMessage != null) {
+            transportMessageService.delete(transportMessage);
+        }
+        Transaction transaction = transactionService.findOneByProperties(config);
         if (transaction != null) {
-            transaction.close();
-            transactionRepository.saveAndFlush(transaction);
+            transactionService.delete(transaction);
         }
         return true;
     }
 
     @RequestMapping(value = "/searchTransaction", method = RequestMethod.POST)
-    public Transaction searchTransaction(@RequestBody SendRequest request) {
+    public Transaction searchTransaction(@RequestBody TransportRequest request) {
         logger.info("Get transaction of user with id=" + request.getUserId()
                 + " and of testStep with id=" + request.getTestStepId());
-        List<KeyValuePair> criteria = new ArrayList<KeyValuePair>();
-        criteria.add(new KeyValuePair("username", request.getConfig().get("username")));
-        criteria.add(new KeyValuePair("password", request.getConfig().get("password")));
-        Transaction transaction = transactionRepository.findOneByCriteria(criteria);
+        Map<String,String> criteria = new HashMap<>();
+        criteria.put("username", request.getConfig().get("username"));
+        criteria.put("password", request.getConfig().get("password"));
+        Transaction transaction = transactionService.findOneByProperties(criteria);
         return transaction;
     }
 
     @Transactional()
     @RequestMapping(value = "/send", method = RequestMethod.POST)
-    public Transaction send(@RequestBody SendRequest request) throws TransportClientException {
+    public Transaction send(@RequestBody TransportRequest request) throws TransportClientException {
         logger.info("Sending message  with user id=" + request.getUserId() + " and test step with id="
                 + request.getTestStepId());
         try {
             Long testStepId = request.getTestStepId();
             Long userId = request.getUserId();
             TransportConfig config =
-                    transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
+                    transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
             config.setTaInitiator(request.getConfig());
             transportConfigService.save(config);
             TestStep testStep = testStepService.findOne(testStepId);
@@ -180,14 +198,14 @@ public class RestTransportController {
             } catch (Exception e) {
                 incomingMessage = tmp;
             }
-            Transaction transaction = transactionRepository.findOneByUserAndTestStep(userId, testStepId);
+            Transaction transaction = transactionService.findOneByUserAndTestStep(userId, testStepId);
             if (transaction == null) {
                 transaction = new Transaction();
-                transaction.setTestStep(testStepService.findOne(testStepId));
+                //transaction.setTestStep(testStepService.findOne(testStepId));
                 transaction.setUser(userRepository.findOne(userId));
                 transaction.setOutgoing(outgoingMessage);
                 transaction.setIncoming(incomingMessage);
-                transactionRepository.save(transaction);
+                transactionService.save(transaction);
             }
             return transaction;
         } catch (Exception e1) {
@@ -197,10 +215,22 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
-    public String message(@RequestBody SendRequest request) throws TransportClientException {
+    public TransportMessage message(@RequestBody TransportRequest request) throws TransportClientException {
         //TODO check auth
-        logger.debug("Send message request received : "+request.toString());
-        return this.webServiceClient.send(request.getMessage(),"username","password",request.getConfig().get("endpoint"));
+
+        Gson gson = new Gson();
+        String requestMessage = request.getMessage();
+        logger.info("Message received : " + requestMessage);
+        //TODO modify the response message
+        Map<String,String> criteria = new HashMap<>();
+        criteria.put("username", request.getConfig().get("username"));
+        criteria.put("password", request.getConfig().get("password"));
+        Transaction transaction = transactionService.findOneByProperties(criteria);
+        transaction.setIncoming(requestMessage);
+        Long messageId = transportMessageService.findMessageIdByProperties(criteria);
+        TransportMessage message = transportMessageService.findOne(messageId);
+        transaction.setOutgoing(message.toString());
+        return message;
     }
 
     @Transactional()
@@ -211,13 +241,16 @@ public class RestTransportController {
         return "hello "+username;
     }
 
-    public TransactionRepository getTransactionRepository() {
-        return transactionRepository;
+    private boolean userExist(Long userId) {
+        User user = userService.findOne(userId);
+        return user != null;
     }
 
-    public void setTransactionRepository(TransactionRepository transactionRepository) {
-        this.transactionRepository = transactionRepository;
+    public TransactionService getTransactionService() {
+        return transactionService;
     }
 
-
+    public void setTransactionService(TransactionService transactionService) {
+        this.transactionService = transactionService;
+    }
 }
