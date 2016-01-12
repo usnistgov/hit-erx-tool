@@ -113,8 +113,8 @@ public class RestTransportController {
 
 
         if (config.get("password") == null && config.get("username") == null) {
-            config.put("username", "vendor_" + user.getId());
-            config.put("password", "vendor_" + user.getId());
+            config.put("username", "vendor_" + user.getId() + "_" + token);
+            config.put("password", "vendor_" + user.getId() + "_" + token);
         }
 
         if (config.get("endpoint") == null) {
@@ -171,7 +171,7 @@ public class RestTransportController {
     }
 
     private Map<String, String> getSutInitiatorConfig(Long userId) {
-        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, "soap");
+        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
