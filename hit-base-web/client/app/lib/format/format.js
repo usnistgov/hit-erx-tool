@@ -833,8 +833,8 @@ angular.module('format').factory('Logger', function () {
     var Logger = function () {
         this.content = '';
         this.ins = [
-            "Configuring connection. Please wait...",
-            "Connection configured.",
+            "Starting listener. Please wait...",
+            "Listener started.",
             "Waiting for incoming message....Elapsed time(second):",
             "<-------------------------------------- Inbound Message ",
             "Inbound message is Invalid",
@@ -843,21 +843,23 @@ angular.module('format').factory('Logger', function () {
             "We did not receive any incoming message after 30s. <p>Possible cause (1): You are using wrong credentials. Please check the credentials in your outbound message against those created for your system.</p>  <p>Possible cause (2):The endpoint address may be incorrect.   Verify that you are using the correct endpoint address that is displayed by the tool.</p>",
             "We did not receive any incoming message after 30s",
             "We were unable to send the response after 30s",
-            "Failed to configure incoming connection. ",
+            "Failed to start listener. ",
             "Transaction aborted",
             "Outbound Message  -------------------------------------->",
-            "Transaction stopped",
-            "Stopping transaction. Please wait...."
+            "Listener stopped",
+            "Stopping listener. Please wait....",
+            "No incoming message received"
         ];
 
         this.ous = [
-            "Outbound Message ========================>",
-            "Outbound message sent successfully.",
+            "Sending outbound Message. Please wait...",
+            "Outbound Message  -------------------------------------->",
             "Inbound message received <========================",
             "Transaction completed",
             "Incorrect message received",
             "Transaction aborted",
-            "Transaction stopped"
+            "Transaction stopped",
+            "No outbound message sent"
         ];
     };
 
@@ -902,6 +904,8 @@ angular.module('format').factory('Logger', function () {
 });
 
 
+
+//TODO: REMOVE
 angular.module('format').factory('Endpoint', function () {
     var Endpoint = function () {
         this.value = null;
@@ -915,7 +919,7 @@ angular.module('format').factory('Endpoint', function () {
 });
 
 
-
+//TODO: REMOVE
 angular.module('format').factory('SecurityFaultCredentials', function ($q, $http) {
 
     var SecurityFaultCredentials = function () {
@@ -932,48 +936,105 @@ angular.module('format').factory('SecurityFaultCredentials', function ($q, $http
 });
 
 
-angular.module('format').factory('User', function ($q, $http,StorageService) {
-    var UserClass = function () {
-        this.info = {};
-        var backup = StorageService.get(StorageService.USER_KEY);
-        if(backup != null){
-            this.info = angular.fromJson(backup);
-        }else {
-            var user = this;
-            $http.post('api/user/create').then(
-                function (response) {
-                    user.setInfo(angular.fromJson(response.data));
-                },
-                function (response) {
-                    user.setInfo(null);
-                    StorageService.remove(StorageService.USER_KEY);
-                }
-            );
-//                $http.get('../../resources/cb/user.json').then(
-//                    function (response) {
-//                        delay.resolve(angular.fromJson(response.data));
-//                    },
-//                    function (response) {
-//                        delay.reject('Sorry,we did not get a response');
-//                    }
-//                );
 
-        }
+
+angular.module('format').factory('User', function ($q, $http, StorageService) {
+    var UserClass = function () {
+        this.info = null;
     };
 
     UserClass.prototype.setInfo = function (data) {
         this.info = data;
-        StorageService.set(StorageService.USER_KEY,angular.toJson(data));
+        //StorageService.set(StorageService.USER_KEY,angular.toJson(data));
     };
 
-    UserClass.prototype.delete = function () {
-        if(this.info && this.info != null && this.info.id != null){
-            $http.post("api/user/" + this.info.id + "/delete");
-        }
-        StorageService.remove(StorageService.USER_KEY);
+    UserClass.prototype.load = function () {
+        var delay = $q.defer();
+        var user = this;
+        $http.post('api/user/current').then(
+            function (response) {
+                var data =  angular.fromJson(response.data);
+                user.setInfo(data);
+                delay.resolve(data);
+            },
+            function (response) {
+                user.setInfo(null);
+                delay.reject(response.data);
+            }
+        );
+
+        //        this.info = {};
+//        var backup = StorageService.get(StorageService.USER_KEY);
+//        if(backup != null){
+//            this.info = angular.fromJson(backup);
+//        }else {
+//            var user = this;
+//            $http.post('api/user/create').then(
+//                function (response) {
+//                     user.setInfo(angular.fromJson(response.data));
+//                },
+//                function (response) {
+//                    user.setInfo(null);
+//                    StorageService.remove(StorageService.USER_KEY);
+//                }
+//            );
+////                $http.get('../../resources/cb/user.json').then(
+////                    function (response) {
+////                        delay.resolve(angular.fromJson(response.data));
+////                    },
+////                    function (response) {
+////                        delay.reject('Sorry,we did not get a response');
+////                    }
+////                );
+//
+//        }
+
+        return delay.promise;
     };
+
+
+//    UserClass.prototype.delete = function () {
+//        if(this.info && this.info != null && this.info.id != null){
+//            $http.post("api/user/" + this.info.id + "/delete");
+//        }
+//        //StorageService.remove(StorageService.USER_KEY);
+//    };
 
     return new UserClass();
+});
+
+
+angular.module('format').factory('Session', function ($q, $http) {
+    var SessionClass = function () {
+    };
+
+    SessionClass.prototype.create = function (data) {
+        var delay = $q.defer();
+        $http.post('api/session/create').then(
+            function (response) {
+                delay.resolve(response);
+            },
+            function (response) {
+                delay.reject(response.data);
+            }
+        );
+        return delay.promise;
+    };
+
+    SessionClass.prototype.destroy = function (data) {
+        var delay = $q.defer();
+        $http.post('api/session/destroy').then(
+            function (response) {
+                delay.resolve(response);
+            },
+            function (response) {
+                delay.reject(response.data);
+            }
+        );
+        return delay.promise;
+    };
+
+    return new SessionClass();
 });
 
 
@@ -1535,11 +1596,11 @@ angular.module('format').factory('Transport', function ($q, $http,StorageService
         return delay.promise;
     };
 
-    Transport.prototype.stopListener = function (testStepId) {
+    Transport.prototype.stopListener = function (testStepId,sutInitiatorConfig) {
         var self = this;
         var delay = $q.defer();
         this.deleteTransaction(testStepId).then(function(result){
-            var data = angular.fromJson({"testStepId": testStepId, "userId": User.info.id});
+            var data = angular.fromJson({"testStepId": testStepId, "userId": User.info.id, "config": sutInitiatorConfig});
             $http.post('api/transport/'  + self.domain  + "/" +  self.protocol + '/stopListener',data).then(
                 function (response) {
                     self.running = true;
@@ -1551,7 +1612,6 @@ angular.module('format').factory('Transport', function ($q, $http,StorageService
                 }
             );
         });
-
 
 //
 //        $http.get('../../resources/cb/stopListener.json').then(
@@ -1568,13 +1628,11 @@ angular.module('format').factory('Transport', function ($q, $http,StorageService
         return delay.promise;
     };
 
-    Transport.prototype.startListener = function (testStepId) {
+    Transport.prototype.startListener = function (testStepId, responseMessageId,sutInitiatorConfig) {
         var self = this;
         var delay = $q.defer();
         this.deleteTransaction(testStepId).then(function(result){
-            //self.responseMessageId = responseMessageId; TODO:???
-//        var data = angular.fromJson(self);
-            var data = angular.fromJson({"testStepId": testStepId, "userId": User.info.id});
+             var data = angular.fromJson({"testStepId": testStepId, "userId": User.info.id, "responseMessageId":responseMessageId, "config": sutInitiatorConfig});
             $http.post('api/transport/'  + self.domain  + "/" +  self.protocol + '/startListener', data).then(
                 function (response) {
                     self.running = true;
