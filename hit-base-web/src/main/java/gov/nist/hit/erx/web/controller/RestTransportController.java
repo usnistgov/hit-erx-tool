@@ -2,6 +2,7 @@ package gov.nist.hit.erx.web.controller;
 
 
 import com.google.gson.Gson;
+import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
 import gov.nist.hit.core.repo.UserRepository;
@@ -20,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 
 /**
@@ -62,20 +65,20 @@ public class RestTransportController {
     private final static String PROTOCOL = "rest";
 
     @Transactional()
-    @RequestMapping(value = "/user/{userId}/taInitiator", method = RequestMethod.POST)
-    public Map<String, String> taInitiatorConfig(@PathVariable("userId") final Long userId)
-            throws UserNotFoundException {
+    @RequestMapping(value = "/taInitiator", method = RequestMethod.POST)
+    public Map<String, String> taInitiatorConfig(HttpSession session) throws UserNotFoundException {
         logger.info("Fetching user ta initiator information ... ");
+        Long userId = SessionContext.getCurrentUserId(session);
         User user = null;
         TransportConfig transportConfig = null;
-        if (userId == null || (user = userRepository.findOne(userId)) == null) {
+        if (userId == null || (user = userService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
         transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
         if (transportConfig == null) {
             transportConfig = transportConfigService.create(PROTOCOL);
             user.addConfig(transportConfig);
-            userRepository.save(user);
+            userService.save(user);
             transportConfigService.save(transportConfig);
         }
         Map<String, String> config = transportConfig.getTaInitiator();
@@ -83,26 +86,31 @@ public class RestTransportController {
     }
 
     @Transactional()
-    @RequestMapping(value = "/user/{userId}/sutInitiator", method = RequestMethod.POST)
-    public Map<String, String> sutInitiatorConfig(@PathVariable("userId") final Long userId,
-                                                  HttpServletRequest request) throws UserNotFoundException {
+    @RequestMapping(value = "/sutInitiator", method = RequestMethod.POST)
+    public Map<String, String> sutInitiatorConfig(HttpSession session, HttpServletRequest request)
+            throws UserNotFoundException {
         logger.info("Fetching user information ... ");
+        Long userId = SessionContext.getCurrentUserId(session);
         User user = null;
-        TransportConfig transportConfig = null;
-        if (userId == null || (user = userRepository.findOne(userId)) == null) {
+        if (userId == null || (user = userService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
+
+        TransportConfig transportConfig = null;
         transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
         if (transportConfig == null) {
             transportConfig = transportConfigService.create(PROTOCOL);
             user.addConfig(transportConfig);
-            userRepository.save(user);
+            userService.save(user);
         }
         Map<String, String> config = transportConfig.getSutInitiator();
         if (config == null) {
             config = new HashMap<String, String>();
             transportConfig.setSutInitiator(config);
         }
+
+        int token = new Random().nextInt(999);
+
 
         if (config.get("password") == null && config.get("username") == null) {
             config.put("username", "vendor_" + user.getId());
@@ -116,42 +124,41 @@ public class RestTransportController {
         return config;
     }
 
-    @Transactional()
+    @Transactional
     @RequestMapping(value = "/startListener", method = RequestMethod.POST)
-    public boolean startListener(@RequestBody TransportRequest request)  throws UserNotFoundException {
-        stopListener(request);
-        logger.info("Starting listener for user with id=" + request.getUserId());
+    public boolean startListener(@RequestBody TransportRequest request, HttpSession session)
+            throws UserNotFoundException {
+        logger.info("Starting listener");
+        Long userId = SessionContext.getCurrentUserId(session);
+        if (userId == null || (userService.findOne(userId)) == null) {
+            throw new UserNotFoundException();
+        }
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
+        removeUserTransaction(userId);
         TransportMessage transportMessage = new TransportMessage();
         transportMessage.setMessageId(request.getResponseMessageId());
-        transportMessage.setProperties(request.getConfig());
+        Map<String, String> config = getSutInitiatorConfig(userId);
+        transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
         return true;
     }
 
-    private Map<String, String> getSutInitiatorConfig(Long userId) {
-        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
-        Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
-        if (sutInitiator == null || sutInitiator.isEmpty())
-            throw new gov.nist.hit.core.service.exception.TransportException(
-                    "No System Under Test configuration info found");
-        return sutInitiator;
+    @Transactional
+    @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
+    public boolean stopListener(@RequestBody TransportRequest request, HttpSession session)
+            throws UserNotFoundException {
+        logger.info("Stopping listener ");
+        Long userId = SessionContext.getCurrentUserId(session);
+        if (userId == null || (userService.findOne(userId)) == null) {
+            throw new UserNotFoundException();
+        }
+        removeUserTransaction(userId);
+        return true;
     }
 
-    @Transactional()
-    @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
-    public boolean stopListener(@RequestBody TransportRequest request)  throws UserNotFoundException {
-        logger.info("Stopping listener for user with id=" + request.getUserId());
-
-        if (request.getUserId() == null)
-            throw new gov.nist.hit.core.service.exception.TransportException("User info not found");
-
-        if (!userExist(request.getUserId()))
-            throw new gov.nist.hit.core.service.exception.TransportException(
-                    "We couldn't recognize the user");
-
-        Map<String, String> config = getSutInitiatorConfig(request.getUserId());
+    private boolean removeUserTransaction(Long userId) {
+        Map<String, String> config = getSutInitiatorConfig(userId);
         TransportMessage transportMessage = transportMessageService.findOneByProperties(config);
         if (transportMessage != null) {
             transportMessageService.delete(transportMessage);
@@ -163,11 +170,19 @@ public class RestTransportController {
         return true;
     }
 
+    private Map<String, String> getSutInitiatorConfig(Long userId) {
+        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, "soap");
+        Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
+        if (sutInitiator == null || sutInitiator.isEmpty())
+            throw new gov.nist.hit.core.service.exception.TransportException(
+                    "No System Under Test configuration info found");
+        return sutInitiator;
+    }
+
     @RequestMapping(value = "/searchTransaction", method = RequestMethod.POST)
     public Transaction searchTransaction(@RequestBody TransportRequest request) {
-        logger.info("Get transaction of user with id=" + request.getUserId()
-                + " and of testStep with id=" + request.getTestStepId());
-        Map<String,String> criteria = new HashMap<>();
+        logger.info("Searching transaction...");
+        Map<String, String> criteria = new HashMap<String, String>();
         criteria.put("username", request.getConfig().get("username"));
         criteria.put("password", request.getConfig().get("password"));
         Transaction transaction = transactionService.findOneByProperties(criteria);
