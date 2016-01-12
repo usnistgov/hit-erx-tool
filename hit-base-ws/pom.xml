@@ -34,13 +34,13 @@
         <dependency>
             <groupId>gov.nist.hit.base</groupId>
             <artifactId>hit-base-service</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
 
         <dependency>
             <groupId>gov.nist.hit.core</groupId>
             <artifactId>hit-core-transport</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
 
         <dependency>
