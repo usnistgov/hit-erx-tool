@@ -1,7 +1,6 @@
 package gov.nist.hit.erx.web.controller;
 
 
-import com.google.gson.Gson;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
@@ -55,11 +54,11 @@ public class RestTransportController {
     protected TransportMessageService transportMessageService;
 
     @Autowired
-    protected UserService userService;
-
-    @Autowired
     @Qualifier("WebServiceClient")
     protected WebServiceClient webServiceClient;
+
+    @Autowired
+    protected UserService userService;
 
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "rest";
@@ -95,9 +94,8 @@ public class RestTransportController {
         if (userId == null || (user = userService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
-
         TransportConfig transportConfig = null;
-        transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
+        transportConfig = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
         if (transportConfig == null) {
             transportConfig = transportConfigService.create(PROTOCOL);
             user.addConfig(transportConfig);
@@ -118,7 +116,7 @@ public class RestTransportController {
         }
 
         if (config.get("endpoint") == null) {
-            config.put("endpoint", Utils.getUrl(request) + "/api/transport/" + DOMAIN + "/" + PROTOCOL + "/message");
+            config.put("endpoint", Utils.getUrl(request) + "/api/ws/" + DOMAIN + "/" + PROTOCOL + "/message");
         }
         transportConfigService.save(transportConfig);
         return config;
@@ -136,9 +134,11 @@ public class RestTransportController {
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
         removeUserTransaction(userId);
+
         TransportMessage transportMessage = new TransportMessage();
         transportMessage.setMessageId(request.getResponseMessageId());
-        Map<String, String> config = getSutInitiatorConfig(userId);
+        Map<String, String> config = new HashMap<String, String>();
+        config.putAll(getSutInitiatorConfig(userId));
         transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
         return true;
@@ -157,15 +157,16 @@ public class RestTransportController {
         return true;
     }
 
+    @Transactional
     private boolean removeUserTransaction(Long userId) {
         Map<String, String> config = getSutInitiatorConfig(userId);
-        TransportMessage transportMessage = transportMessageService.findOneByProperties(config);
-        if (transportMessage != null) {
-            transportMessageService.delete(transportMessage);
+        List<TransportMessage> transportMessages = transportMessageService.findAllByProperties(config);
+        if (transportMessages != null) {
+            transportMessageService.delete(transportMessages);
         }
-        Transaction transaction = transactionService.findOneByProperties(config);
-        if (transaction != null) {
-            transactionService.delete(transaction);
+        List<Transaction> transactions = transactionService.findAllByProperties(config);
+        if (transactions != null) {
+            transactionService.delete(transactions);
         }
         return true;
     }
@@ -206,7 +207,7 @@ public class RestTransportController {
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
             String outgoingMessage = request.getMessage();
             String incomingMessage =
-                    webServiceClient.send(outgoingMessage, request.getConfig().get("username"),request.getConfig().get("password"),request.getConfig().get("endpoint"));
+                    webServiceClient.send(outgoingMessage, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
             try {
                 incomingMessage = XmlUtil.prettyPrint(incomingMessage);
@@ -228,44 +229,9 @@ public class RestTransportController {
         }
     }
 
-    @Transactional()
-    @RequestMapping(value = "/message", method = RequestMethod.POST)
-    public TransportMessage message(@RequestBody TransportRequest request) throws TransportClientException {
-        //TODO check auth
-
-        Gson gson = new Gson();
-        String requestMessage = request.getMessage();
-        logger.info("Message received : " + requestMessage);
-        //TODO modify the response message
-        Map<String,String> criteria = new HashMap<>();
-        criteria.put("username", request.getConfig().get("username"));
-        criteria.put("password", request.getConfig().get("password"));
-        Transaction transaction = transactionService.findOneByProperties(criteria);
-        transaction.setIncoming(requestMessage);
-        Long messageId = transportMessageService.findMessageIdByProperties(criteria);
-        TransportMessage message = transportMessageService.findOne(messageId);
-        transaction.setOutgoing(message.toString());
-        return message;
-    }
-
-    @Transactional()
-    @RequestMapping(value = "/test", method = RequestMethod.GET)
-    public String test(@RequestParam String username){
-        //TODO check auth
-        String password = "pass";
-        return "hello "+username;
-    }
-
     private boolean userExist(Long userId) {
         User user = userService.findOne(userId);
         return user != null;
     }
 
-    public TransactionService getTransactionService() {
-        return transactionService;
-    }
-
-    public void setTransactionService(TransactionService transactionService) {
-        this.transactionService = transactionService;
-    }
 }
