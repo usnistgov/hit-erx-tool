@@ -114,6 +114,15 @@ angular.module('cf')
             return node.testContext && node.testContext != null;
         };
 
+        $scope.expandAll = function () {
+            if($scope.tree != null)
+                $scope.tree.expand_all();
+        };
+
+        $scope.collapseAll = function () {
+            if($scope.tree != null)
+                $scope.tree.collapse_all();
+        };
 
     }]);
 
@@ -427,6 +436,16 @@ angular.module('cf')
                 $scope.vLoading = false;
             });
 
+        };
+
+        $scope.expandAll = function () {
+            if($scope.cf.tree.root != null)
+                $scope.cf.tree.root.expand_all();
+        };
+
+        $scope.collapseAll = function () {
+            if($scope.cf.tree.root!= null)
+                $scope.cf.tree.root.collapse_all();
         };
 
     }])
