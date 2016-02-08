@@ -44,7 +44,7 @@
                                 <!--</table>-->
                                 <div ng-show="testCases != null && testCases.length > 0">
                                     <testcase-tree tree-control="tree" icon-leaf=""
-                                                   is-selectable="isSelectable(branch)"
+                                                    is-selectable="isSelectable(branch)"
                                                    on-select="selectTestCase(branch)"></testcase-tree>
                                 </div>
                                 <div ng-show="testCases == null || testCases.length == 0">
@@ -79,11 +79,11 @@
                                     Download Test Package
                                 </button>
 
-                                 <button title="Download Quick Test Reference Guide" type="button" class="btn btn-xs btn-info"
-                                         ng-show="selectedTestCase.quickTestCaseReferenceGuide && selectedTestCase.quickTestCaseReferenceGuide != null && selectedTestCase.quickTestCaseReferenceGuide.pdfPath != null"
-                                         ng-click="downloadArtifact(selectedTestCase.quickTestCaseReferenceGuide.pdfPath)">
+                                 <button title="Download Test Plan Summary" type="button" class="btn btn-xs btn-info"
+                                         ng-show="selectedTestCase.testPlanSummary && selectedTestCase.testPlanSummary != null && selectedTestCase.testPlanSummary.pdfPath != null"
+                                         ng-click="downloadArtifact(selectedTestCase.testPlanSummary.pdfPath)">
                                      <i class="fa fa-download"></i>
-                                     Download Quick Test Case Reference Guide
+                                     Download Test Plan Summary
                                  </button>
 
                                 <button title="Load Selected Test Step" ng-show="(selectedTestCase.type == 'TestStep' && selectedTestCase.testContext != null && selectedTestCase.testContext.format != null)" type="button"
