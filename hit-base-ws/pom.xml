@@ -10,8 +10,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>hit-erx-ws</artifactId>
-
+    <properties>
+		<hit-core.version>1.0.1-SNAPSHOT</hit-core.version>
+ 	</properties> 
     <dependencies>
+        
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore-nio</artifactId>
@@ -40,7 +43,7 @@
         <dependency>
             <groupId>gov.nist.hit.core</groupId>
             <artifactId>hit-core-transport</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${hit-core.version}</version>
         </dependency>
 
         <dependency>
