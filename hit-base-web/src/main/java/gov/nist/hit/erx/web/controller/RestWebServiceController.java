@@ -2,29 +2,23 @@ package gov.nist.hit.erx.web.controller;
 
 import com.google.gson.Gson;
 import com.mifmif.common.regex.Generex;
-import gov.nist.hit.MessageIdFinder;
 import gov.nist.hit.MessageTypeFinder;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
 import gov.nist.hit.core.service.*;
-import gov.nist.hit.core.service.edi.EDIMessageParser;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.ws.client.Message;
 import gov.nist.hit.impl.EdiMessageEditor;
 import gov.nist.hit.impl.EdiMessageParser;
-import gov.nist.hit.impl.XMLMessageEditor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -66,7 +60,7 @@ public class RestWebServiceController {
         Gson gson = new Gson();
         String responseMessage = "";
         String jsonRequest = gson.toJson(request);
-        Message received = gson.fromJson(jsonRequest,Message.class);
+        Message received = gson.fromJson(jsonRequest, Message.class);
         logger.info("Message received : " + jsonRequest);
         //TODO modify the response message
         Map<String, String> criteria = new HashMap<>();
@@ -79,33 +73,33 @@ public class RestWebServiceController {
         HashMap<String, String> fieldsToBeReplacedInSentMessage = new HashMap<>();
         Long userConfigId = userConfigService.findUserIdByProperties(criteria);
         TestCaseExecution testCaseExecution = null;
-        if(userConfigId != null){
+        if (userConfigId != null) {
             testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
-            if(testCaseExecution!=null){
+            if (testCaseExecution != null) {
                 Collection<DataMapping> dataMappings = testCaseExecution.getTestCase().getDataMappings();
-                for(DataMapping dataMapping : dataMappings){
+                for (DataMapping dataMapping : dataMappings) {
                     TestStepFieldPair target = dataMapping.getTarget();
-                    if(target.getTestStep().getId()==testCaseExecution.getNextTestStepId()){
+                    if (target.getTestStep().getId() == testCaseExecution.getNextTestStepId()) {
                         String data = "";
-                        if(dataMapping.getSource() instanceof TestStepFieldPair) {
+                        if (dataMapping.getSource() instanceof TestStepFieldPair) {
                             data = testCaseExecutionDataService.getTestCaseExecutionData(target.getId()).getData();
                         } else {
-                            if(dataMapping.getSource() instanceof MappingSourceConstant){
+                            if (dataMapping.getSource() instanceof MappingSourceConstant) {
                                 data = ((MappingSourceConstant) dataMapping.getSource()).getValue();
-                            } else if(dataMapping.getSource() instanceof MappingSourceCurrentDate){
+                            } else if (dataMapping.getSource() instanceof MappingSourceCurrentDate) {
                                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
                                 simpleDateFormat.applyPattern(((MappingSourceCurrentDate) dataMapping.getSource()).getFormat());
                                 data = simpleDateFormat.format(new Date());
-                            } else if(dataMapping.getSource() instanceof MappingSourceRandom){
+                            } else if (dataMapping.getSource() instanceof MappingSourceRandom) {
                                 Generex generex = new Generex(((MappingSourceRandom) dataMapping.getSource()).getRegex());
                                 data = generex.random();
                             }
                         }
-                        fieldsToBeReplacedInSentMessage.put(target.getField(),data);
+                        fieldsToBeReplacedInSentMessage.put(target.getField(), data);
                     }
-                    if(dataMapping.getSource() instanceof TestStepFieldPair){
+                    if (dataMapping.getSource() instanceof TestStepFieldPair) {
                         TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
-                        if(source.getTestStep().getId()==testCaseExecution.getNextTestStepId()){
+                        if (source.getTestStep().getId() == testCaseExecution.getNextTestStepId()) {
                             fieldsToReadInReceivedMessage.add(source);
                         }
                     }
@@ -115,23 +109,23 @@ public class RestWebServiceController {
         //validation getDataFromMessage
         Long messageId = transportMessageService.findMessageIdByProperties(criteria);
         gov.nist.hit.core.domain.Message message;
-        if(messageId!=null) {
-             message = messageRepository.getOne(messageId);
+        if (messageId != null) {
+            message = messageRepository.getOne(messageId);
             if (message != null) {
                 TestContext testContext = testContextRepository.findOneByMessageId(messageId);
                 MessageTypeFinder messageTypeFinder = MessageTypeFinder.getInstance();
-                if(testContext.getFormat().toLowerCase().equals("edi")) {
+                if (testContext.getFormat().toLowerCase().equals("edi")) {
                     EdiMessageParser ediMessageParser = new EdiMessageParser();
                     ArrayList<String> fieldNames = new ArrayList<>();
-                    for(TestStepFieldPair source : fieldsToReadInReceivedMessage){
+                    for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
                         fieldNames.add(source.getField());
                     }
                     gov.nist.hit.core.domain.Message messageReceived = new gov.nist.hit.core.domain.Message();
                     messageReceived.setContent(received.getMessage());
-                    Map<String,String> data = null;
+                    Map<String, String> data = null;
                     try {
                         data = ediMessageParser.readInMessage(messageReceived, fieldNames, testContext);
-                        for(TestStepFieldPair source : fieldsToReadInReceivedMessage){
+                        for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
                             TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
                             testCaseExecutionData.setTestStepFieldPair(source);
                             testCaseExecutionData.setData(data.get(source.getField()));
@@ -149,7 +143,7 @@ public class RestWebServiceController {
                         e.printStackTrace();
                     }
                     transaction.setOutgoing(responseMessage);
-                } else if(testContext.getFormat().toLowerCase().equals("xml")){
+                } else if (testContext.getFormat().toLowerCase().equals("xml")) {
                     try {
                         /*String receivedMessageType = messageTypeFinder.findXmlMessageType(received.getMessage());
                         XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
@@ -158,7 +152,7 @@ public class RestWebServiceController {
                         simpleDateFormat.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
                         replaceTokens.put("SentTime", simpleDateFormat.format(new Date()));
                         responseMessage = xmlMessageEditor.replaceInMessage(message,replaceTokens,testContext);*/
-                        logger.info("Message sent back : "+message.getContent());
+                        logger.info("Message sent back : " + message.getContent());
                         responseMessage = message.getContent();
                         transaction.setIncoming(received.getMessage());
                         transaction.setOutgoing(responseMessage);
@@ -166,18 +160,17 @@ public class RestWebServiceController {
                         e.printStackTrace();
                     }
                 } else {
-                    throw new MessageParserException("Message with id "+messageId+" must be either EDI or XML ("+testContext.getFormat()+" found instead)");
+                    throw new MessageParserException("Message with id " + messageId + " must be either EDI or XML (" + testContext.getFormat() + " found instead)");
                 }
             } else {
-                throw new TransportClientException("Message with id "+messageId+" not found");
+                throw new TransportClientException("Message with id " + messageId + " not found");
             }
         } else {
-            throw new TransportClientException("Message id not found for criteria "+criteria.toString());
+            throw new TransportClientException("Message id not found for criteria " + criteria.toString());
         }
         transactionService.save(transaction);
         return responseMessage;
     }
-
 
 
     @Transactional()

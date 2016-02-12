@@ -1,7 +1,6 @@
 package gov.nist.hit.erx.web.controller;
 
 
-import com.google.gson.Gson;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
@@ -18,7 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -92,11 +94,11 @@ public class RestTransportController {
         Long userConfigId = null;
         try {
             userConfigId = userConfigService.findUserIdByProperties(config);
-        } catch (NullPointerException e){
+        } catch (NullPointerException e) {
             //do nothing, it means we have to init the user, see finally below
         } finally {
             TestCaseExecution testCaseExecution = null;
-            if(userConfigId==null){
+            if (userConfigId == null) {
                 UserConfig userConfig = new UserConfig();
                 userConfig.setProperties(config);
                 userConfig = userConfigService.save(userConfig);
@@ -106,10 +108,10 @@ public class RestTransportController {
                 TestCase testCase = testStep.getTestCase();
                 testCaseExecution.setTestCase(testCase);
                 Iterator<TestStep> testStepIterator = testCase.getTestSteps().iterator();
-                while(testStepIterator.hasNext()){
+                while (testStepIterator.hasNext()) {
                     TestStep currentTestStep = testStepIterator.next();
-                    if(currentTestStep.getId()==testStep.getId()){
-                        if(testStepIterator.hasNext()){
+                    if (currentTestStep.getId() == testStep.getId()) {
+                        if (testStepIterator.hasNext()) {
                             testCaseExecution.setNextTestStepId(testStepIterator.next().getId());
                         }
                         break;
@@ -179,7 +181,7 @@ public class RestTransportController {
         transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
         TestStep testStep = testStepService.findOne(request.getTestStepId());
-        if(testStep!=null){
+        if (testStep != null) {
             initTestCaseExecution(config, testStep);
         }
         return true;

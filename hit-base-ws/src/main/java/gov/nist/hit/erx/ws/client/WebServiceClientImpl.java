@@ -2,13 +2,12 @@ package gov.nist.hit.erx.ws.client;
 
 import com.google.gson.Gson;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.core.transport.service.TransportClient;
-
-import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,7 +47,7 @@ public class WebServiceClientImpl implements WebServiceClient {
         //RestTemplate restTemplate = new RestTemplate();
         //ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.POST, request,String.class);
 
-        Message body = new Message(message,username,password);
+        Message body = new Message(message, username, password);
         Gson gson = new Gson();
         RestTemplate restTemplate = new RestTemplate();
 
@@ -56,7 +55,7 @@ public class WebServiceClientImpl implements WebServiceClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> entity = new HttpEntity<String>(requestJson,headers);
+        HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
         String answer = restTemplate.postForObject(endpoint, entity, String.class);
 
         return answer;
