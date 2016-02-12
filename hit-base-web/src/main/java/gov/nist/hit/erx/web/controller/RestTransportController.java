@@ -1,6 +1,7 @@
 package gov.nist.hit.erx.web.controller;
 
 
+import com.google.gson.Gson;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
@@ -21,10 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 
 /**
@@ -52,6 +50,12 @@ public class RestTransportController {
 
     @Autowired
     protected TransportMessageService transportMessageService;
+
+    @Autowired
+    protected TestCaseExecutionService testCaseExecutionService;
+
+    @Autowired
+    protected UserConfigService userConfigService;
 
     @Autowired
     @Qualifier("WebServiceClient")
@@ -82,6 +86,38 @@ public class RestTransportController {
         }
         Map<String, String> config = transportConfig.getTaInitiator();
         return config;
+    }
+
+    private void initTestCaseExecution(Map<String, String> config, TestStep testStep) {
+        Long userConfigId = null;
+        try {
+            userConfigId = userConfigService.findUserIdByProperties(config);
+        } catch (NullPointerException e){
+            //do nothing, it means we have to init the user, see finally below
+        } finally {
+            TestCaseExecution testCaseExecution = null;
+            if(userConfigId==null){
+                UserConfig userConfig = new UserConfig();
+                userConfig.setProperties(config);
+                userConfig = userConfigService.save(userConfig);
+                userConfigId = userConfig.getId();
+                testCaseExecution = new TestCaseExecution();
+                testCaseExecution.setUserConfig(userConfig);
+                TestCase testCase = testStep.getTestCase();
+                testCaseExecution.setTestCase(testCase);
+                Iterator<TestStep> testStepIterator = testCase.getTestSteps().iterator();
+                while(testStepIterator.hasNext()){
+                    TestStep currentTestStep = testStepIterator.next();
+                    if(currentTestStep.getId()==testStep.getId()){
+                        if(testStepIterator.hasNext()){
+                            testCaseExecution.setNextTestStepId(testStepIterator.next().getId());
+                        }
+                        break;
+                    }
+                }
+                testCaseExecutionService.save(testCaseExecution);
+            }
+        }
     }
 
     @Transactional()
@@ -135,12 +171,17 @@ public class RestTransportController {
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
         removeUserTransaction(userId);
 
-        TransportMessage transportMessage = new TransportMessage();
-        transportMessage.setMessageId(request.getResponseMessageId());
         Map<String, String> config = new HashMap<String, String>();
         config.putAll(getSutInitiatorConfig(userId));
+
+        TransportMessage transportMessage = new TransportMessage();
+        transportMessage.setMessageId(request.getResponseMessageId());
         transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
+        TestStep testStep = testStepService.findOne(request.getTestStepId());
+        if(testStep!=null){
+            initTestCaseExecution(config, testStep);
+        }
         return true;
     }
 

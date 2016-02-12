@@ -1,15 +1,13 @@
 package gov.nist.hit.erx.web.controller;
 
 import com.google.gson.Gson;
+import com.mifmif.common.regex.Generex;
 import gov.nist.hit.MessageIdFinder;
 import gov.nist.hit.MessageTypeFinder;
-import gov.nist.hit.core.domain.TestContext;
-import gov.nist.hit.core.domain.Transaction;
-import gov.nist.hit.core.domain.TransportRequest;
+import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
-import gov.nist.hit.core.service.TransactionService;
-import gov.nist.hit.core.service.TransportMessageService;
+import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.ws.client.Message;
@@ -49,6 +47,15 @@ public class RestWebServiceController {
     @Autowired
     protected TestContextRepository testContextRepository;
 
+    @Autowired
+    protected TestCaseExecutionService testCaseExecutionService;
+
+    @Autowired
+    protected UserConfigService userConfigService;
+
+    @Autowired
+    protected TestCaseExecutionDataService testCaseExecutionDataService;
+
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
@@ -66,6 +73,44 @@ public class RestWebServiceController {
         Transaction transaction = new Transaction();
         transaction.setProperties(criteria);
         transaction.setIncoming(received.getMessage());
+        ArrayList<TestStepFieldPair> fieldsToReadInReceivedMessage = new ArrayList<>();
+        HashMap<String, String> fieldsToBeReplacedInSentMessage = new HashMap<>();
+        Long userConfigId = userConfigService.findUserIdByProperties(criteria);
+        TestCaseExecution testCaseExecution = null;
+        if(userConfigId != null){
+            testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
+            if(testCaseExecution!=null){
+                Collection<DataMapping> dataMappings = testCaseExecution.getTestCase().getDataMappings();
+                for(DataMapping dataMapping : dataMappings){
+                    TestStepFieldPair target = dataMapping.getTarget();
+                    if(target.getTestStep().getId()==testCaseExecution.getNextTestStepId()){
+                        String data = "";
+                        if(dataMapping.getSource() instanceof TestStepFieldPair) {
+                            data = testCaseExecutionDataService.getTestCaseExecutionData(target.getId()).getData();
+                        } else {
+                            if(dataMapping.getSource() instanceof MappingSourceConstant){
+                                data = ((MappingSourceConstant) dataMapping.getSource()).getValue();
+                            } else if(dataMapping.getSource() instanceof MappingSourceCurrentDate){
+                                SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
+                                simpleDateFormat.applyPattern(((MappingSourceCurrentDate) dataMapping.getSource()).getFormat());
+                                data = simpleDateFormat.format(new Date());
+                            } else if(dataMapping.getSource() instanceof MappingSourceRandom){
+                                Generex generex = new Generex(((MappingSourceRandom) dataMapping.getSource()).getRegex());
+                                data = generex.random();
+                            }
+                        }
+                        fieldsToBeReplacedInSentMessage.put(target.getField(),data);
+                    }
+                    if(dataMapping.getSource() instanceof TestStepFieldPair){
+                        TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
+                        if(source.getTestStep().getId()==testCaseExecution.getNextTestStepId()){
+                            fieldsToReadInReceivedMessage.add(source);
+                        }
+                    }
+                }
+            }
+        }
+        //validation getDataFromMessage
         Long messageId = transportMessageService.findMessageIdByProperties(criteria);
         gov.nist.hit.core.domain.Message message;
         if(messageId!=null) {
@@ -95,13 +140,17 @@ public class RestWebServiceController {
                     transaction.setOutgoing(responseMessage);
                 } else if(testContext.getFormat().toLowerCase().equals("xml")){
                     try {
-                        String receivedMessageType = messageTypeFinder.findXmlMessageType(received.getMessage());
+                        /*String receivedMessageType = messageTypeFinder.findXmlMessageType(received.getMessage());
                         XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
                         HashMap<String, String> replaceTokens = new HashMap<>();
                         SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
                         simpleDateFormat.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
                         replaceTokens.put("SentTime", simpleDateFormat.format(new Date()));
-                        responseMessage = xmlMessageEditor.replaceInMessage(message,replaceTokens,testContext);
+                        responseMessage = xmlMessageEditor.replaceInMessage(message,replaceTokens,testContext);*/
+                        logger.info("Message sent back : "+message.getContent());
+                        responseMessage = message.getContent();
+                        transaction.setIncoming(received.getMessage());
+                        transaction.setOutgoing(responseMessage);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
