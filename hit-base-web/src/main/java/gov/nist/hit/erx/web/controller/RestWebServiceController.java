@@ -8,10 +8,12 @@ import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
 import gov.nist.hit.core.service.*;
+import gov.nist.hit.core.service.edi.EDIMessageParser;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.ws.client.Message;
 import gov.nist.hit.impl.EdiMessageEditor;
+import gov.nist.hit.impl.EdiMessageParser;
 import gov.nist.hit.impl.XMLMessageEditor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,19 +121,28 @@ public class RestWebServiceController {
                 TestContext testContext = testContextRepository.findOneByMessageId(messageId);
                 MessageTypeFinder messageTypeFinder = MessageTypeFinder.getInstance();
                 if(testContext.getFormat().toLowerCase().equals("edi")) {
+                    EdiMessageParser ediMessageParser = new EdiMessageParser();
+                    ArrayList<String> fieldNames = new ArrayList<>();
+                    for(TestStepFieldPair source : fieldsToReadInReceivedMessage){
+                        fieldNames.add(source.getField());
+                    }
+                    gov.nist.hit.core.domain.Message messageReceived = new gov.nist.hit.core.domain.Message();
+                    messageReceived.setContent(received.getMessage());
+                    Map<String,String> data = null;
+                    try {
+                        data = ediMessageParser.readInMessage(messageReceived, fieldNames, testContext);
+                        for(TestStepFieldPair source : fieldsToReadInReceivedMessage){
+                            TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
+                            testCaseExecutionData.setTestStepFieldPair(source);
+                            testCaseExecutionData.setData(data.get(source.getField()));
+                            testCaseExecutionDataService.save(testCaseExecutionData);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     EdiMessageEditor ediMessageEditor = new EdiMessageEditor();
                     try {
-                        String receivedMessageType = messageTypeFinder.findEdiMessageType(received.getMessage());
-                        HashMap<String, String> replaceTokens = new HashMap<>();
-                        if(receivedMessageType.equals("chgres")||receivedMessageType.equals("refres")){
-                            SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
-                            simpleDateFormat.applyPattern("yyyymmdd");
-                            replaceTokens.put("UIB-080-01", simpleDateFormat.format(new Date()));
-                            simpleDateFormat.applyPattern("HHmmss");
-                            replaceTokens.put("UIB-080-02", simpleDateFormat.format(new Date()));
-                        }
-                        replaceTokens.put("UIH-020",receivedMessageType);
-                        responseMessage = ediMessageEditor.replaceInMessage(message, replaceTokens, testContext);
+                        responseMessage = ediMessageEditor.replaceInMessage(message, fieldsToBeReplacedInSentMessage, testContext);
                         logger.info("Generated response message : " + responseMessage);
                     } catch (Exception e) {
                         responseMessage = e.getMessage();
