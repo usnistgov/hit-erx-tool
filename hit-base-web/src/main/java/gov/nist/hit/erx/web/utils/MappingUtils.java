@@ -43,11 +43,11 @@ public class MappingUtils {
     @Autowired
     protected static TestCaseExecutionDataService testCaseExecutionDataService;
 
-    public static void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings,TestContext testContext, Long testStepID){
+    public static void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
         MessageParser messageParser = null;
-        if(testContext instanceof EDITestContext){
+        if(testStep.getTestContext() instanceof EDITestContext){
             messageParser = new EdiMessageParser();
-        } else if (testContext instanceof XMLTestContext){
+        } else if (testStep.getTestContext() instanceof XMLTestContext){
             messageParser = new XMLMessageParser();
         }
         if(messageParser!=null){
@@ -55,14 +55,14 @@ public class MappingUtils {
             for(DataMapping dataMapping : dataMappings){
                 if(dataMapping.getSource() instanceof TestStepFieldPair){
                     TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
-                    if(source.getTestStep().getId()==testStepID){
+                    if(source.getTestStep().getId()==testStep.getId()){
                         keysToFind.put(source.getField(),source);
                     }
                 }
             }
             ArrayList<String> dataToBeFound = (ArrayList<String>) setToArrayList(keysToFind.keySet());
             try {
-                Map<String, String> data = messageParser.readInMessage(message, dataToBeFound, testContext);
+                Map<String, String> data = messageParser.readInMessage(message, dataToBeFound, testStep.getTestContext());
                 for(String key : data.keySet()){
                     TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
                     testCaseExecutionData.setTestStepFieldPair(keysToFind.get(key));
@@ -76,10 +76,10 @@ public class MappingUtils {
         }
     }
 
-    public static String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestContext testContext, Long testStepID){
+    public static String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
         HashMap<String,String> dataToReplaceInMessage = new HashMap<>();
         for(DataMapping dataMapping : dataMappings) {
-            if (dataMapping.getTarget().getTestStep().getId() == testStepID) {
+            if (dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId());
@@ -97,23 +97,23 @@ public class MappingUtils {
                     Generex generex = new Generex(mappingSourceRandom.getRegex());
                     data = generex.random();
                 } else {
-                    logger.error("Invalid mapping for test step " + testStepID);
+                    logger.error("Invalid mapping for test step " + testStep.getId());
                 }
                 dataToReplaceInMessage.put(dataMapping.getTarget().getField(),data);
             }
         }
         if(dataToReplaceInMessage.size()>0) {
             MessageEditor messageEditor = null;
-            if (testContext instanceof EDITestContext) {
+            if (testStep.getTestContext() instanceof EDITestContext) {
                 messageEditor = new EdiMessageEditor();
-            } else if (testContext instanceof XMLTestContext) {
+            } else if (testStep.getTestContext() instanceof XMLTestContext) {
                 messageEditor = new XMLMessageEditor();
             } else {
-                logger.error("Message must be either EDI or XML. " + testContext.getFormat() + " found instead.");
+                logger.error("Message must be either EDI or XML. " + testStep.getTestContext().getFormat() + " found instead.");
             }
             if (messageEditor != null) {
                 try {
-                    String editedMessage = messageEditor.replaceInMessage(message,dataToReplaceInMessage,testContext);
+                    String editedMessage = messageEditor.replaceInMessage(message,dataToReplaceInMessage,testStep.getTestContext());
                     return editedMessage;
                 } catch (Exception e) {
                     logger.error(e.getMessage());

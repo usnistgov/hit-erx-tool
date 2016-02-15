@@ -1,22 +1,17 @@
 package gov.nist.hit.erx.web.controller;
 
 
-import com.mifmif.common.regex.Generex;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
-import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.repo.UserRepository;
 import gov.nist.hit.core.service.*;
-import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.service.exception.TestCaseException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.core.xml.domain.XMLTestContext;
+import gov.nist.hit.erx.web.utils.MappingUtils;
 import gov.nist.hit.erx.web.utils.Utils;
 import gov.nist.hit.erx.ws.client.WebServiceClient;
-import gov.nist.hit.impl.EdiMessageEditor;
-import gov.nist.hit.impl.EdiMessageParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -270,8 +264,8 @@ public class RestTransportController {
                 transaction.setIncoming(incomingMessage);
                 transactionService.save(transaction);
             }
-            //Read data in the received message
 
+            //Read data in the received message
             TestStep nextTestStep = null;
             Iterator<TestStep> testSteps = testStep.getTestCase().getTestSteps().iterator();
             while(testSteps.hasNext()){
@@ -281,53 +275,12 @@ public class RestTransportController {
                     break;
                 }
             }
-            ArrayList<TestStepFieldPair> fieldsToReadInReceivedMessage = new ArrayList<>();
-            Collection<DataMapping> dataMappings = testStep.getTestCase().getDataMappings();
-            for (DataMapping dataMapping : dataMappings) {
-                if (dataMapping.getSource() instanceof TestStepFieldPair) {
-                    TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
-                    if (source.getTestStep().getId() == nextTestStep.getId()) {
-                        fieldsToReadInReceivedMessage.add(source);
-                    }
-                }
-            }
 
-            if (testStep.getTestContext() instanceof EDITestContext) {
-                EDITestContext ediTestContext = (EDITestContext) testStep.getTestContext();
-                EdiMessageParser ediMessageParser = new EdiMessageParser();
-                ArrayList<String> fieldNames = new ArrayList<>();
-                for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
-                    fieldNames.add(source.getField());
-                }
-                gov.nist.hit.core.domain.Message messageReceived = new gov.nist.hit.core.domain.Message();
-                messageReceived.setContent(transaction.getIncoming());
-                Map<String, String> data = null;
-                try {
-                    data = ediMessageParser.readInMessage(messageReceived, fieldNames, ediTestContext);
-                    for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
-                        TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
-                        testCaseExecutionData.setTestStepFieldPair(source);
-                        testCaseExecutionData.setData(data.get(source.getField()));
-                        testCaseExecutionDataService.save(testCaseExecutionData);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            } else if (testStep.getTestContext() instanceof XMLTestContext) {
-                try {
-                        /*String receivedMessageType = messageTypeFinder.findXmlMessageType(received.getMessage());
-                        XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
-                        HashMap<String, String> replaceTokens = new HashMap<>();
-                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
-                        simpleDateFormat.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
-                        replaceTokens.put("SentTime", simpleDateFormat.format(new Date()));
-                        responseMessage = xmlMessageEditor.replaceInMessage(message,replaceTokens,testContext);*/
-                    //read in xml message
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            } else {
-                throw new MessageParserException("Message received must be either EDI or XML (" + testStep.getTestContext().getFormat() + " found instead)");
+            if(nextTestStep!=null){
+                Collection<DataMapping> dataMappings = nextTestStep.getTestCase().getDataMappings();
+                Message message = new Message();
+                message.setContent(incomingMessage);
+                MappingUtils.readDatasFromMessage(message,dataMappings,nextTestStep);
             }
 
             return transaction;

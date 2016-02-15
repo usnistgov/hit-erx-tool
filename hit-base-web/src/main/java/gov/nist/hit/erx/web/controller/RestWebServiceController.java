@@ -1,10 +1,7 @@
 package gov.nist.hit.erx.web.controller;
 
 import com.google.gson.Gson;
-import com.mifmif.common.regex.Generex;
-import gov.nist.hit.MessageTypeFinder;
 import gov.nist.hit.core.domain.*;
-import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
 import gov.nist.hit.core.service.*;
@@ -12,18 +9,19 @@ import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.MappingUtils;
 import gov.nist.hit.erx.ws.client.Message;
-import gov.nist.hit.impl.EdiMessageEditor;
-import gov.nist.hit.impl.EdiMessageParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import sun.misc.MessageUtils;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by mcl1 on 1/13/16.
@@ -98,10 +96,11 @@ public class RestWebServiceController {
                 Collection<DataMapping> dataMappings = testCaseExecution.getTestCase().getDataMappings();
                 gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
                 receivedMessage.setContent(received.getMessage());
-                MappingUtils.readDatasFromMessage(receivedMessage,dataMappings,testContext,testCaseExecution.getCurrentTestStepId());
-                outgoingMessage.setContent(MappingUtils.writeDataInMessage(outgoingMessage, dataMappings, testContext, responseTestStep.getId()));
+                TestStep currentTestStep = testStepService.findOne(testCaseExecution.getCurrentTestStepId());
+                MappingUtils.readDatasFromMessage(receivedMessage, dataMappings, currentTestStep);
+                outgoingMessage.setContent(MappingUtils.writeDataInMessage(outgoingMessage, dataMappings, responseTestStep));
                 //Note : There shouldn't be any information to be read from the message we send, this is just a security net
-                MappingUtils.readDatasFromMessage(outgoingMessage,dataMappings,testContext,testCaseExecution.getCurrentTestStepId());
+                MappingUtils.readDatasFromMessage(outgoingMessage, dataMappings, currentTestStep);
                 transaction.setOutgoing(outgoingMessage.getContent());
             }
         }
