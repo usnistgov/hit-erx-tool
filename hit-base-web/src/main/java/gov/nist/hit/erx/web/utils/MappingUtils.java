@@ -41,9 +41,9 @@ public class MappingUtils {
 
 
     @Autowired
-    protected TestCaseExecutionDataService testCaseExecutionDataService;
+    protected static TestCaseExecutionDataService testCaseExecutionDataService;
 
-    public void readDatasFromMessage(Message message, List<DataMapping> dataMappings,TestContext testContext, TestStep testStep){
+    public static void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings,TestContext testContext, Long testStepID){
         MessageParser messageParser = null;
         if(testContext instanceof EDITestContext){
             messageParser = new EdiMessageParser();
@@ -55,7 +55,7 @@ public class MappingUtils {
             for(DataMapping dataMapping : dataMappings){
                 if(dataMapping.getSource() instanceof TestStepFieldPair){
                     TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
-                    if(source.getTestStep().getId()==testStep.getId()){
+                    if(source.getTestStep().getId()==testStepID){
                         keysToFind.put(source.getField(),source);
                     }
                 }
@@ -76,10 +76,10 @@ public class MappingUtils {
         }
     }
 
-    public String writeDataInMessage(Message message, List<DataMapping> dataMappings, TestContext testContext, TestStep testStep){
+    public static String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestContext testContext, Long testStepID){
         HashMap<String,String> dataToReplaceInMessage = new HashMap<>();
         for(DataMapping dataMapping : dataMappings) {
-            if (dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
+            if (dataMapping.getTarget().getTestStep().getId() == testStepID) {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId());
@@ -97,7 +97,7 @@ public class MappingUtils {
                     Generex generex = new Generex(mappingSourceRandom.getRegex());
                     data = generex.random();
                 } else {
-                    logger.error("Invalid mapping for test step " + testStep.getId() + "(" + testStep.getDescription() + ")");
+                    logger.error("Invalid mapping for test step " + testStepID);
                 }
                 dataToReplaceInMessage.put(dataMapping.getTarget().getField(),data);
             }
@@ -124,7 +124,7 @@ public class MappingUtils {
         return message.getContent();
     }
 
-    private ArrayList<?> setToArrayList(Set<?> set){
+    private static ArrayList<?> setToArrayList(Set<?> set){
         return new ArrayList<>(set);
     }
 
