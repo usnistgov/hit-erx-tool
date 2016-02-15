@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.mifmif.common.regex.Generex;
 import gov.nist.hit.MessageTypeFinder;
 import gov.nist.hit.core.domain.*;
+import gov.nist.hit.core.edi.domain.EDITestContext;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
 import gov.nist.hit.core.service.*;
@@ -52,6 +53,9 @@ public class RestWebServiceController {
     @Autowired
     protected TestCaseExecutionDataService testCaseExecutionDataService;
 
+    @Autowired
+    protected TestStepService testStepService;
+
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
@@ -69,20 +73,40 @@ public class RestWebServiceController {
         Transaction transaction = new Transaction();
         transaction.setProperties(criteria);
         transaction.setIncoming(received.getMessage());
+
+        Long messageId = transportMessageService.findMessageIdByProperties(criteria);
+        gov.nist.hit.core.domain.Message message;
+        TestContext testContext = null;
+        if (messageId != null) {
+            message = messageRepository.getOne(messageId);
+            if (message != null) {
+                testContext = testContextRepository.findOneByMessageId(messageId);
+                MessageTypeFinder messageTypeFinder = MessageTypeFinder.getInstance();
+            } else {
+                throw new TransportClientException("Message with id " + messageId + " not found");
+            }
+        } else {
+            throw new TransportClientException("Message id not found for criteria " + criteria.toString());
+        }
         ArrayList<TestStepFieldPair> fieldsToReadInReceivedMessage = new ArrayList<>();
         HashMap<String, String> fieldsToBeReplacedInSentMessage = new HashMap<>();
         Long userConfigId = userConfigService.findUserIdByProperties(criteria);
         TestCaseExecution testCaseExecution = null;
-        if (userConfigId != null) {
+        if (userConfigId != null && testContext != null) {
+            TestStep currentTestStep = testStepService.findOneByTestContext(testContext.getId());
             testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
             if (testCaseExecution != null) {
                 Collection<DataMapping> dataMappings = testCaseExecution.getTestCase().getDataMappings();
                 for (DataMapping dataMapping : dataMappings) {
                     TestStepFieldPair target = dataMapping.getTarget();
-                    if (target.getTestStep().getId() == testCaseExecution.getNextTestStepId()) {
+                    if (target.getTestStep().getId() == currentTestStep.getId()) {
+                        logger.info("####Target found. currentTestStepId : " + currentTestStep.getId() + "\ntestCaseExecution testStepId : " + testCaseExecution.getCurrentTestStepId() + "\nMapping : " + dataMapping.toString());
                         String data = "";
                         if (dataMapping.getSource() instanceof TestStepFieldPair) {
-                            data = testCaseExecutionDataService.getTestCaseExecutionData(target.getId()).getData();
+                            TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(target.getId());
+                            if (testCaseExecutionData != null) {
+                                data = testCaseExecutionData.getData();
+                            }
                         } else {
                             if (dataMapping.getSource() instanceof MappingSourceConstant) {
                                 data = ((MappingSourceConstant) dataMapping.getSource()).getValue();
@@ -99,52 +123,46 @@ public class RestWebServiceController {
                     }
                     if (dataMapping.getSource() instanceof TestStepFieldPair) {
                         TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
-                        if (source.getTestStep().getId() == testCaseExecution.getNextTestStepId()) {
+                        if (source.getTestStep().getId() == testCaseExecution.getCurrentTestStepId()) {
                             fieldsToReadInReceivedMessage.add(source);
                         }
                     }
                 }
             }
         }
-        //validation getDataFromMessage
-        Long messageId = transportMessageService.findMessageIdByProperties(criteria);
-        gov.nist.hit.core.domain.Message message;
-        if (messageId != null) {
-            message = messageRepository.getOne(messageId);
-            if (message != null) {
-                TestContext testContext = testContextRepository.findOneByMessageId(messageId);
-                MessageTypeFinder messageTypeFinder = MessageTypeFinder.getInstance();
-                if (testContext.getFormat().toLowerCase().equals("edi")) {
-                    EdiMessageParser ediMessageParser = new EdiMessageParser();
-                    ArrayList<String> fieldNames = new ArrayList<>();
-                    for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
-                        fieldNames.add(source.getField());
-                    }
-                    gov.nist.hit.core.domain.Message messageReceived = new gov.nist.hit.core.domain.Message();
-                    messageReceived.setContent(received.getMessage());
-                    Map<String, String> data = null;
-                    try {
-                        data = ediMessageParser.readInMessage(messageReceived, fieldNames, testContext);
-                        for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
-                            TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
-                            testCaseExecutionData.setTestStepFieldPair(source);
-                            testCaseExecutionData.setData(data.get(source.getField()));
-                            testCaseExecutionDataService.save(testCaseExecutionData);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    EdiMessageEditor ediMessageEditor = new EdiMessageEditor();
-                    try {
-                        responseMessage = ediMessageEditor.replaceInMessage(message, fieldsToBeReplacedInSentMessage, testContext);
-                        logger.info("Generated response message : " + responseMessage);
-                    } catch (Exception e) {
-                        responseMessage = e.getMessage();
-                        e.printStackTrace();
-                    }
-                    transaction.setOutgoing(responseMessage);
-                } else if (testContext.getFormat().toLowerCase().equals("xml")) {
-                    try {
+
+        if (testContext instanceof EDITestContext) {
+            EDITestContext ediTestContext = (EDITestContext) testContext;
+            EdiMessageParser ediMessageParser = new EdiMessageParser();
+            ArrayList<String> fieldNames = new ArrayList<>();
+            for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
+                fieldNames.add(source.getField());
+            }
+            gov.nist.hit.core.domain.Message messageReceived = new gov.nist.hit.core.domain.Message();
+            messageReceived.setContent(received.getMessage());
+            Map<String, String> data = null;
+            try {
+                data = ediMessageParser.readInMessage(messageReceived, fieldNames, testContext);
+                for (TestStepFieldPair source : fieldsToReadInReceivedMessage) {
+                    TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
+                    testCaseExecutionData.setTestStepFieldPair(source);
+                    testCaseExecutionData.setData(data.get(source.getField()));
+                    testCaseExecutionDataService.save(testCaseExecutionData);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            EdiMessageEditor ediMessageEditor = new EdiMessageEditor();
+            try {
+                responseMessage = ediMessageEditor.replaceInMessage(message, fieldsToBeReplacedInSentMessage, testContext);
+                logger.info("Generated response message : " + responseMessage);
+            } catch (Exception e) {
+                responseMessage = e.getMessage();
+                e.printStackTrace();
+            }
+            transaction.setOutgoing(responseMessage);
+        } else if (testContext.getFormat().toLowerCase().equals("xml")) {
+            try {
                         /*String receivedMessageType = messageTypeFinder.findXmlMessageType(received.getMessage());
                         XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
                         HashMap<String, String> replaceTokens = new HashMap<>();
@@ -152,22 +170,17 @@ public class RestWebServiceController {
                         simpleDateFormat.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
                         replaceTokens.put("SentTime", simpleDateFormat.format(new Date()));
                         responseMessage = xmlMessageEditor.replaceInMessage(message,replaceTokens,testContext);*/
-                        logger.info("Message sent back : " + message.getContent());
-                        responseMessage = message.getContent();
-                        transaction.setIncoming(received.getMessage());
-                        transaction.setOutgoing(responseMessage);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    throw new MessageParserException("Message with id " + messageId + " must be either EDI or XML (" + testContext.getFormat() + " found instead)");
-                }
-            } else {
-                throw new TransportClientException("Message with id " + messageId + " not found");
+                logger.info("Message sent back : " + message.getContent());
+                responseMessage = message.getContent();
+                transaction.setIncoming(received.getMessage());
+                transaction.setOutgoing(responseMessage);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         } else {
-            throw new TransportClientException("Message id not found for criteria " + criteria.toString());
+            throw new MessageParserException("Message with id " + messageId + " must be either EDI or XML (" + testContext.getFormat() + " found instead)");
         }
+
         transactionService.save(transaction);
         return responseMessage;
     }
