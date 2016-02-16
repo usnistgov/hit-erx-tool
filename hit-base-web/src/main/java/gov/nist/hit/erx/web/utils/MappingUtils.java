@@ -41,9 +41,9 @@ public class MappingUtils {
 
 
     @Autowired
-    protected static TestCaseExecutionDataService testCaseExecutionDataService;
+    protected TestCaseExecutionDataService testCaseExecutionDataService;
 
-    public static void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
+    public void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
         MessageParser messageParser = null;
         if(testStep.getTestContext() instanceof EDITestContext){
             messageParser = new EdiMessageParser();
@@ -76,7 +76,7 @@ public class MappingUtils {
         }
     }
 
-    public static String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
+    public String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
         HashMap<String,String> dataToReplaceInMessage = new HashMap<>();
         for(DataMapping dataMapping : dataMappings) {
             if (dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
@@ -124,7 +124,7 @@ public class MappingUtils {
         return message.getContent();
     }
 
-    private static ArrayList<?> setToArrayList(Set<?> set){
+    private ArrayList<?> setToArrayList(Set<?> set){
         return new ArrayList<>(set);
     }
 

@@ -61,7 +61,7 @@ public class RestTransportController {
     protected UserConfigService userConfigService;
 
     @Autowired
-    protected TestCaseExecutionDataService testCaseExecutionDataService;
+    protected MappingUtils mappingUtils;
 
     @Autowired
     @Qualifier("WebServiceClient")
@@ -280,7 +280,7 @@ public class RestTransportController {
                 Collection<DataMapping> dataMappings = nextTestStep.getTestCase().getDataMappings();
                 Message message = new Message();
                 message.setContent(incomingMessage);
-                MappingUtils.readDatasFromMessage(message,dataMappings,nextTestStep);
+                mappingUtils.readDatasFromMessage(message,dataMappings,nextTestStep);
             }
 
             return transaction;

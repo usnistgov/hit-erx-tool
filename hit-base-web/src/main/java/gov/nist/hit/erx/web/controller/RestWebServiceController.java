@@ -51,10 +51,10 @@ public class RestWebServiceController {
     protected UserConfigService userConfigService;
 
     @Autowired
-    protected TestCaseExecutionDataService testCaseExecutionDataService;
+    protected TestStepService testStepService;
 
     @Autowired
-    protected TestStepService testStepService;
+    protected MappingUtils mappingUtils;
 
 
     @Transactional()
@@ -97,12 +97,13 @@ public class RestWebServiceController {
                 gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
                 receivedMessage.setContent(received.getMessage());
                 TestStep currentTestStep = testStepService.findOne(testCaseExecution.getCurrentTestStepId());
-                MappingUtils.readDatasFromMessage(receivedMessage, dataMappings, currentTestStep);
-                outgoingMessage.setContent(MappingUtils.writeDataInMessage(outgoingMessage, dataMappings, responseTestStep));
+                mappingUtils.readDatasFromMessage(receivedMessage, dataMappings, currentTestStep);
+                outgoingMessage.setContent(mappingUtils.writeDataInMessage(outgoingMessage, dataMappings, responseTestStep));
                 //Note : There shouldn't be any information to be read from the message we send, this is just a security net
-                MappingUtils.readDatasFromMessage(outgoingMessage, dataMappings, currentTestStep);
+                mappingUtils.readDatasFromMessage(outgoingMessage, dataMappings, currentTestStep);
                 transaction.setOutgoing(outgoingMessage.getContent());
             }
+            testCaseExecutionService.delete(testCaseExecution);
         }
         transactionService.save(transaction);
         return responseMessage;
