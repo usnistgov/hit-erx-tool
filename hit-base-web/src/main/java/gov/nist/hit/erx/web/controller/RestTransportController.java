@@ -107,8 +107,13 @@ public class RestTransportController {
                 userConfig = new UserConfig();
                 userConfig.setProperties(config);
                 userConfig = userConfigService.save(userConfig);
+                userConfigId = userConfig.getId();
             } else {
                 userConfig = userConfigService.findOne(userConfigId);
+            }
+            testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
+            if(testCaseExecution!=null){
+                testCaseExecutionService.delete(testCaseExecution);
             }
             testCaseExecution = new TestCaseExecution();
             testCaseExecution.setUserConfig(userConfig);
@@ -173,7 +178,6 @@ public class RestTransportController {
 
         Map<String, String> config = new HashMap<String, String>();
         config.putAll(getSutInitiatorConfig(userId));
-
         TransportMessage transportMessage = new TransportMessage();
         transportMessage.setMessageId(request.getResponseMessageId());
         transportMessage.setProperties(config);
@@ -247,6 +251,9 @@ public class RestTransportController {
             if (testStep == null)
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
             String outgoingMessage = request.getMessage();
+            Message message = new Message();
+            message.setContent(outgoingMessage);
+            outgoingMessage = mappingUtils.writeDataInMessage(message,testStep.getTestCase().getDataMappings(),testStep);
             String incomingMessage =
                     webServiceClient.send(outgoingMessage, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
@@ -278,13 +285,14 @@ public class RestTransportController {
 
             if(nextTestStep!=null){
                 Collection<DataMapping> dataMappings = nextTestStep.getTestCase().getDataMappings();
-                Message message = new Message();
+                Message message2 = new Message();
                 message.setContent(incomingMessage);
                 mappingUtils.readDatasFromMessage(message,dataMappings,nextTestStep);
             }
 
             return transaction;
         } catch (Exception e1) {
+            logger.error(e1.toString());
             throw new TransportClientException("Failed to send the message." + e1.getMessage());
         }
     }

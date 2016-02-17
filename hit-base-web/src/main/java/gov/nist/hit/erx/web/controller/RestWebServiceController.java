@@ -62,10 +62,9 @@ public class RestWebServiceController {
     public String message(@RequestBody TransportRequest request) throws TransportClientException, MessageParserException {
         //TODO check auth
         Gson gson = new Gson();
-        String responseMessage = "";
         String jsonRequest = gson.toJson(request);
         Message received = gson.fromJson(jsonRequest, Message.class);
-        logger.info("Message received : " + jsonRequest);
+        logger.info("Message received : " + received.getMessage());
         //TODO modify the response message
         Map<String, String> criteria = new HashMap<>();
         criteria.put("username", received.getConfig().getUsername());
@@ -106,7 +105,7 @@ public class RestWebServiceController {
             testCaseExecutionService.delete(testCaseExecution);
         }
         transactionService.save(transaction);
-        return responseMessage;
+        return transaction.getOutgoing();
     }
 
 }
