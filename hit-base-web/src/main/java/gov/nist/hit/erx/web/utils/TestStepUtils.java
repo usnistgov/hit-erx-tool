@@ -21,12 +21,9 @@ import java.util.Iterator;
 @Service
 public class TestStepUtils {
     public TestStep findNext(TestStep currentTestStep) {
-        TestStep nextTestStep = null;
-        Iterator<TestStep> testSteps = currentTestStep.getTestCase().getTestSteps().iterator();
-        while (testSteps.hasNext()) {
-            TestStep next = testSteps.next();
-            if (next.getId() == currentTestStep.getId() && testSteps.hasNext()) {
-                return testSteps.next();
+        for(TestStep testStep : currentTestStep.getTestCase().getTestSteps()){
+            if (testStep.getPosition() == currentTestStep.getPosition()+1) {
+                return testStep;
             }
         }
         return null;
