@@ -7,6 +7,7 @@ import gov.nist.hit.core.domain.util.XmlUtil;
 import gov.nist.hit.core.repo.UserRepository;
 import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.exception.TestCaseException;
+import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.MappingUtils;
@@ -178,7 +179,7 @@ public class RestTransportController {
     }
 
     private Map<String, String> getSutInitiatorConfig(Long userId) {
-        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL,DOMAIN);
+        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
@@ -198,28 +199,25 @@ public class RestTransportController {
 
     @Transactional()
     @RequestMapping(value = "/send", method = RequestMethod.POST)
-    public Transaction send(@RequestBody TransportRequest request) throws TransportClientException {
+    public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
         logger.info("Sending message  with user id=" + request.getUserId() + " and test step with id="
                 + request.getTestStepId());
         try {
             Long testStepId = request.getTestStepId();
-            Long userId = request.getUserId();
+            Long userId = SessionContext.getCurrentUserId(session);
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
+            Message outgoingMessage = testStep.getTestContext().getMessage();
             TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId,testStep);
             TransportConfig config =
                     transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
             config.setTaInitiator(request.getConfig());
             transportConfigService.save(config);
-            String outgoingMessage = request.getMessage();
-            Message message = new Message();
-            message.setContent(outgoingMessage);
-
-
-            outgoingMessage = mappingUtils.writeDataInMessage(message,testStep,testCaseExecution);
+            String responseMessage = mappingUtils.writeDataInMessage(outgoingMessage,testStep,testCaseExecution);
+            outgoingMessage.setContent(responseMessage);
             String incomingMessage =
-                    webServiceClient.send(outgoingMessage, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+                    webServiceClient.send(outgoingMessage.getContent(), request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
             try {
                 incomingMessage = XmlUtil.prettyPrint(incomingMessage);
@@ -240,7 +238,7 @@ public class RestTransportController {
                 transaction = new Transaction();
                 //transaction.setTestStep(testStepService.findOne(testStepId));
                 transaction.setUser(userRepository.findOne(userId));
-                transaction.setOutgoing(outgoingMessage);
+                transaction.setOutgoing(outgoingMessage.getContent());
                 transaction.setIncoming(incomingMessage);
                 transactionService.save(transaction);
             }
