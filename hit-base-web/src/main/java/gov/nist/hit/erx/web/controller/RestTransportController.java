@@ -178,7 +178,7 @@ public class RestTransportController {
     }
 
     private Map<String, String> getSutInitiatorConfig(Long userId) {
-        TransportConfig config = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
+        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL,DOMAIN);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
@@ -209,7 +209,7 @@ public class RestTransportController {
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
             TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId,testStep);
             TransportConfig config =
-                    transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
+                    transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
             config.setTaInitiator(request.getConfig());
             transportConfigService.save(config);
             String outgoingMessage = request.getMessage();
