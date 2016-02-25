@@ -10,6 +10,8 @@ import gov.nist.hit.core.service.exception.TestCaseException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.MappingUtils;
+import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
+import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.web.utils.Utils;
 import gov.nist.hit.erx.ws.client.WebServiceClient;
 import org.slf4j.Logger;
@@ -55,13 +57,16 @@ public class RestTransportController {
     protected TransportMessageService transportMessageService;
 
     @Autowired
-    protected TestCaseExecutionService testCaseExecutionService;
-
-    @Autowired
-    protected UserConfigService userConfigService;
+    protected TestCaseExecutionUtils testCaseExecutionUtils;
 
     @Autowired
     protected MappingUtils mappingUtils;
+
+    @Autowired
+    protected TestStepUtils testStepUtils;
+
+    @Autowired
+    protected UserConfigService userConfigService;
 
     @Autowired
     @Qualifier("WebServiceClient")
@@ -73,93 +78,48 @@ public class RestTransportController {
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "rest";
 
-    @Transactional()
-    @RequestMapping(value = "/taInitiator", method = RequestMethod.POST)
-    public Map<String, String> taInitiatorConfig(HttpSession session) throws UserNotFoundException {
-        logger.info("Fetching user ta initiator information ... ");
+    @Transactional
+    @RequestMapping(value = "/configs", method = RequestMethod.POST)
+    public TransportConfig configs(HttpSession session, HttpServletRequest request)
+            throws UserNotFoundException {
+        logger.info("Fetching user configuration information ... ");
         Long userId = SessionContext.getCurrentUserId(session);
         User user = null;
-        TransportConfig transportConfig = null;
         if (userId == null || (user = userService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
-        transportConfig = transportConfigService.findOneByUserAndProtocol(user.getId(), PROTOCOL);
+        TransportConfig transportConfig =
+                transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
         if (transportConfig == null) {
-            transportConfig = transportConfigService.create(PROTOCOL);
+            transportConfig = transportConfigService.create(PROTOCOL, DOMAIN);
             user.addConfig(transportConfig);
             userService.save(user);
+            Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request);
+            Map<String, String> taInitiatorConfig = taInitiatorConfig(user, request);
+            transportConfig.setSutInitiator(sutInitiatorConfig);
+            transportConfig.setTaInitiator(taInitiatorConfig);
             transportConfigService.save(transportConfig);
         }
-        Map<String, String> config = transportConfig.getTaInitiator();
+        return transportConfig;
+    }
+
+    private Map<String, String> taInitiatorConfig(User user, HttpServletRequest request)
+            throws UserNotFoundException {
+        logger.info("Creating user ta initiator config information ... ");
+        Map<String, String> config = new HashMap<String, String>();
+        config.put("username", "");
+        config.put("password", "");
         return config;
     }
 
-    private void initTestCaseExecution(Map<String, String> config, TestStep testStep) {
-        Long userConfigId = null;
-        try {
-            userConfigId = userConfigService.findUserIdByProperties(config);
-        } catch (NullPointerException e) {
-            //do nothing, it means we have to init the user, see finally below
-        } finally {
-            TestCaseExecution testCaseExecution = null;
-            UserConfig userConfig = null;
-            if (userConfigId == null) {
-                userConfig = new UserConfig();
-                userConfig.setProperties(config);
-                userConfig = userConfigService.save(userConfig);
-                userConfigId = userConfig.getId();
-            } else {
-                userConfig = userConfigService.findOne(userConfigId);
-            }
-            testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
-            if(testCaseExecution!=null){
-                testCaseExecutionService.delete(testCaseExecution);
-            }
-            testCaseExecution = new TestCaseExecution();
-            testCaseExecution.setUserConfig(userConfig);
-            TestCase testCase = testStep.getTestCase();
-            testCaseExecution.setTestCase(testCase);
-            testCaseExecution.setCurrentTestStepId(testStep.getId());
-            logger.info("Init testCaseExecution : UserId : "+userConfig.getId()+", TestStep "+testStep.getId()+", TestCase "+testStep.getTestCase().getId());
-            testCaseExecutionService.save(testCaseExecution);
-        }
-    }
-
-    @Transactional()
-    @RequestMapping(value = "/sutInitiator", method = RequestMethod.POST)
-    public Map<String, String> sutInitiatorConfig(HttpSession session, HttpServletRequest request)
+    private Map<String, String> sutInitiatorConfig(User user, HttpServletRequest request)
             throws UserNotFoundException {
-        logger.info("Fetching user information ... ");
-        Long userId = SessionContext.getCurrentUserId(session);
-        User user = null;
-        if (userId == null || (user = userService.findOne(userId)) == null) {
-            throw new UserNotFoundException();
-        }
-        TransportConfig transportConfig = null;
-        transportConfig = transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
-        if (transportConfig == null) {
-            transportConfig = transportConfigService.create(PROTOCOL);
-            user.addConfig(transportConfig);
-            userService.save(user);
-        }
-        Map<String, String> config = transportConfig.getSutInitiator();
-        if (config == null) {
-            config = new HashMap<String, String>();
-            transportConfig.setSutInitiator(config);
-        }
-
+        logger.info("Creating user sut initiator config information ... ");
+        Map<String, String> config = new HashMap<String, String>();
         int token = new Random().nextInt(999);
-
-
-        if (config.get("password") == null && config.get("username") == null) {
-            config.put("username", "vendor_" + user.getId() + "_" + token);
-            config.put("password", "vendor_" + user.getId() + "_" + token);
-        }
-
-        if (config.get("endpoint") == null) {
-            config.put("endpoint", Utils.getUrl(request) + "/api/ws/" + DOMAIN + "/" + PROTOCOL + "/message");
-        }
-        transportConfigService.save(transportConfig);
+        config.put("username", "vendor_" + user.getId() + "_" + token);
+        config.put("password", "vendor_" + user.getId() + "_" + token);
+        config.put("endpoint", Utils.getUrl(request) + "/api/ws/" + DOMAIN + "/" + PROTOCOL + "/message");
         return config;
     }
 
@@ -184,8 +144,9 @@ public class RestTransportController {
         transportMessageService.save(transportMessage);
         TestStep testStep = testStepService.findOne(request.getTestStepId());
         if (testStep != null) {
-            initTestCaseExecution(config, testStep);
+            testCaseExecutionUtils.initTestCaseExecution(userId, testStep);
         }
+        userConfigService.save(new UserConfig(config,userId));
         return true;
     }
 
@@ -243,17 +204,20 @@ public class RestTransportController {
         try {
             Long testStepId = request.getTestStepId();
             Long userId = request.getUserId();
+            TestStep testStep = testStepService.findOne(testStepId);
+            if (testStep == null)
+                throw new TestCaseException("Unknown test step with id=" + testStepId);
+            TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId,testStep);
             TransportConfig config =
                     transportConfigService.findOneByUserAndProtocol(userId, PROTOCOL);
             config.setTaInitiator(request.getConfig());
             transportConfigService.save(config);
-            TestStep testStep = testStepService.findOne(testStepId);
-            if (testStep == null)
-                throw new TestCaseException("Unknown test step with id=" + testStepId);
             String outgoingMessage = request.getMessage();
             Message message = new Message();
             message.setContent(outgoingMessage);
-            outgoingMessage = mappingUtils.writeDataInMessage(message,testStep.getTestCase().getDataMappings(),testStep);
+
+
+            outgoingMessage = mappingUtils.writeDataInMessage(message,testStep,testCaseExecution);
             String incomingMessage =
                     webServiceClient.send(outgoingMessage, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
@@ -262,6 +226,15 @@ public class RestTransportController {
             } catch (Exception e) {
                 incomingMessage = tmp;
             }
+
+            //Read data in the received message
+            TestStep nextTestStep = testStepUtils.findNext(testStep);
+            if(nextTestStep!=null){
+                Message message2 = new Message();
+                message2.setContent(incomingMessage);
+                mappingUtils.readDatasFromMessage(message2,nextTestStep,testCaseExecutionUtils.initTestCaseExecution(userId,nextTestStep));
+            }
+
             Transaction transaction = transactionService.findOneByUserAndTestStep(userId, testStepId);
             if (transaction == null) {
                 transaction = new Transaction();
@@ -270,24 +243,6 @@ public class RestTransportController {
                 transaction.setOutgoing(outgoingMessage);
                 transaction.setIncoming(incomingMessage);
                 transactionService.save(transaction);
-            }
-
-            //Read data in the received message
-            TestStep nextTestStep = null;
-            Iterator<TestStep> testSteps = testStep.getTestCase().getTestSteps().iterator();
-            while(testSteps.hasNext()){
-                TestStep next = testSteps.next();
-                if(next.getId()==testStep.getId()&&testSteps.hasNext()){
-                    nextTestStep = testSteps.next();
-                    break;
-                }
-            }
-
-            if(nextTestStep!=null){
-                Collection<DataMapping> dataMappings = nextTestStep.getTestCase().getDataMappings();
-                Message message2 = new Message();
-                message.setContent(incomingMessage);
-                mappingUtils.readDatasFromMessage(message,dataMappings,nextTestStep);
             }
 
             return transaction;

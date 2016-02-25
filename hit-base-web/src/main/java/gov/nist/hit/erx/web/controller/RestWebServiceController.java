@@ -8,6 +8,8 @@ import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.MappingUtils;
+import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
+import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.ws.client.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +47,6 @@ public class RestWebServiceController {
     protected TestContextRepository testContextRepository;
 
     @Autowired
-    protected TestCaseExecutionService testCaseExecutionService;
-
-    @Autowired
     protected UserConfigService userConfigService;
 
     @Autowired
@@ -56,6 +55,11 @@ public class RestWebServiceController {
     @Autowired
     protected MappingUtils mappingUtils;
 
+    @Autowired
+    protected TestCaseExecutionUtils testCaseExecutionUtils;
+
+    @Autowired
+    protected TestStepUtils testStepUtils;
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
@@ -74,11 +78,11 @@ public class RestWebServiceController {
         transaction.setIncoming(received.getMessage());
 
         Long messageId = transportMessageService.findMessageIdByProperties(criteria);
-        gov.nist.hit.core.domain.Message outgoingMessage;
+        gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
         TestContext testContext = null;
         if (messageId != null) {
-            outgoingMessage = messageRepository.getOne(messageId);
-            if (outgoingMessage != null) {
+            outgoingMessage.setContent(messageRepository.getContentById(messageId));
+            if (outgoingMessage.getContent() != null) {
                 testContext = testContextRepository.findOneByMessageId(messageId);
             } else {
                 throw new TransportClientException("Message with id " + messageId + " not found");
@@ -86,23 +90,24 @@ public class RestWebServiceController {
         } else {
             throw new TransportClientException("Message id not found for criteria " + criteria.toString());
         }
-        Long userConfigId = userConfigService.findUserIdByProperties(criteria);
-        TestCaseExecution testCaseExecution = null;
-        if (userConfigId != null && testContext != null) {
-            TestStep responseTestStep = testStepService.findOneByTestContext(testContext.getId());
-            testCaseExecution = testCaseExecutionService.findOneByUserConfigId(userConfigId);
+        Long userId = userConfigService.findUserIdByProperties(criteria);
+        if (testContext != null) {
+            TestStep currentTestStep = testStepService.findOneByTestContext(testContext.getId());
+            TestCaseExecution testCaseExecution = testCaseExecutionUtils.findOne(userId);
             if (testCaseExecution != null) {
-                Collection<DataMapping> dataMappings = testCaseExecution.getTestCase().getDataMappings();
+                TestCase testCase = currentTestStep.getTestCase();
+                testCaseExecution.setTestCase(testCase);
+                testCaseExecution.setCurrentTestStepId(currentTestStep.getId());
                 gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
                 receivedMessage.setContent(received.getMessage());
-                TestStep currentTestStep = testStepService.findOne(testCaseExecution.getCurrentTestStepId());
-                mappingUtils.readDatasFromMessage(receivedMessage, dataMappings, currentTestStep);
-                outgoingMessage.setContent(mappingUtils.writeDataInMessage(outgoingMessage, dataMappings, responseTestStep));
+                TestStep nextTestStep = testStepUtils.findNext(currentTestStep);
+                mappingUtils.readDatasFromMessage(receivedMessage, currentTestStep,testCaseExecution);
+                String content = mappingUtils.writeDataInMessage(outgoingMessage, nextTestStep, testCaseExecution);
+                outgoingMessage.setContent(content);
                 //Note : There shouldn't be any information to be read from the message we send, this is just a security net
-                mappingUtils.readDatasFromMessage(outgoingMessage, dataMappings, currentTestStep);
-                transaction.setOutgoing(outgoingMessage.getContent());
+                //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);
+                transaction.setOutgoing(content);
             }
-            testCaseExecutionService.delete(testCaseExecution);
         }
         transactionService.save(transaction);
         return transaction.getOutgoing();

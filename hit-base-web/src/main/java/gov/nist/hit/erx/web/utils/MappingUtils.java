@@ -43,7 +43,7 @@ public class MappingUtils {
     @Autowired
     protected TestCaseExecutionDataService testCaseExecutionDataService;
 
-    public void readDatasFromMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
+    public void readDatasFromMessage(Message message, TestStep testStep, TestCaseExecution testCaseExecution){
         MessageParser messageParser = null;
         if(testStep.getTestContext() instanceof EDITestContext){
             messageParser = new EdiMessageParser();
@@ -52,7 +52,7 @@ public class MappingUtils {
         }
         if(messageParser!=null){
             HashMap<String,TestStepFieldPair> keysToFind = new HashMap<>();
-            for(DataMapping dataMapping : dataMappings){
+            for(DataMapping dataMapping : testStep.getTestCase().getDataMappings()){
                 if(dataMapping.getSource() instanceof TestStepFieldPair){
                     TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
                     if(source.getTestStep().getId()==testStep.getId()){
@@ -67,6 +67,7 @@ public class MappingUtils {
                     TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
                     testCaseExecutionData.setTestStepFieldPair(keysToFind.get(key));
                     testCaseExecutionData.setData(data.get(key));
+                    testCaseExecutionData.setTestCaseExecution(testCaseExecution);
                     testCaseExecutionDataService.save(testCaseExecutionData);
                 }
             } catch (Exception e) {
@@ -76,13 +77,13 @@ public class MappingUtils {
         }
     }
 
-    public String writeDataInMessage(Message message, Collection<DataMapping> dataMappings, TestStep testStep){
+    public String writeDataInMessage(Message message, TestStep testStep, TestCaseExecution testCaseExecution){
         HashMap<String,String> dataToReplaceInMessage = new HashMap<>();
-        for(DataMapping dataMapping : dataMappings) {
+        for(DataMapping dataMapping : testStep.getTestCase().getDataMappings()) {
             if (dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
-                    TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId());
+                    TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId(),testCaseExecution.getId());
                     data = testCaseExecutionData.getData();
                 } else if (dataMapping.getSource() instanceof MappingSourceConstant) {
                     MappingSourceConstant mappingSourceConstant = (MappingSourceConstant) dataMapping.getSource();
