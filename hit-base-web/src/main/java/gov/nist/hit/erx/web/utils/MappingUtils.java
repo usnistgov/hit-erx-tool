@@ -84,7 +84,8 @@ public class MappingUtils {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId(),testCaseExecution.getId());
-                    data = testCaseExecutionData.getData();
+                    if(testCaseExecutionData!=null)
+                        data = testCaseExecutionData.getData();
                 } else if (dataMapping.getSource() instanceof MappingSourceConstant) {
                     MappingSourceConstant mappingSourceConstant = (MappingSourceConstant) dataMapping.getSource();
                     data = mappingSourceConstant.getValue();
