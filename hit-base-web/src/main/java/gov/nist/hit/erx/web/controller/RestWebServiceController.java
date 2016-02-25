@@ -100,9 +100,9 @@ public class RestWebServiceController {
                 testCaseExecution.setCurrentTestStepId(currentTestStep.getId());
                 gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
                 receivedMessage.setContent(received.getMessage());
-                TestStep nextTestStep = testStepUtils.findNext(currentTestStep);
-                mappingUtils.readDatasFromMessage(receivedMessage, currentTestStep,testCaseExecution);
-                String content = mappingUtils.writeDataInMessage(outgoingMessage, nextTestStep, testCaseExecution);
+                TestStep receivedMessageTestStep = testStepUtils.findPrevious(currentTestStep);
+                mappingUtils.readDatasFromMessage(receivedMessage, receivedMessageTestStep,testCaseExecution);
+                String content = mappingUtils.writeDataInMessage(outgoingMessage, currentTestStep, testCaseExecution);
                 outgoingMessage.setContent(content);
                 //Note : There shouldn't be any information to be read from the message we send, this is just a security net
                 //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);

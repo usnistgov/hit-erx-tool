@@ -208,7 +208,9 @@ public class RestTransportController {
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestCaseException("Unknown test step with id=" + testStepId);
-            Message outgoingMessage = testStep.getTestContext().getMessage();
+
+            Message outgoingMessage = new Message();
+            outgoingMessage.setContent(request.getMessage());
             TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId,testStep);
             TransportConfig config =
                     transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
@@ -227,7 +229,7 @@ public class RestTransportController {
 
             //Read data in the received message
             TestStep nextTestStep = testStepUtils.findNext(testStep);
-            if(nextTestStep!=null){
+            if (nextTestStep!=null){
                 Message message2 = new Message();
                 message2.setContent(incomingMessage);
                 mappingUtils.readDatasFromMessage(message2,nextTestStep,testCaseExecutionUtils.initTestCaseExecution(userId,nextTestStep));

@@ -28,4 +28,12 @@ public class TestStepUtils {
         }
         return null;
     }
+    public TestStep findPrevious(TestStep currentTestStep) {
+        for(TestStep testStep : currentTestStep.getTestCase().getTestSteps()){
+            if (testStep.getPosition() == currentTestStep.getPosition()-1) {
+                return testStep;
+            }
+        }
+        return null;
+    }
 }
