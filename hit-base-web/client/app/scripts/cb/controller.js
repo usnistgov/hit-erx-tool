@@ -206,6 +206,9 @@ angular.module('cb')
         };
 
         $scope.resetTestCase = function () {
+            if (CB.editor != null && CB.editor.instance != null) {
+                CB.editor.instance.setOption("readOnly", false);
+            }
             StorageService.remove(StorageService.CB_LOADED_TESTSTEP_TYPE_KEY);
             StorageService.remove(StorageService.CB_LOADED_TESTSTEP_ID_KEY);
             $scope.executeTestCase($scope.testCase);
@@ -372,6 +375,9 @@ angular.module('cb')
 
 
         $scope.clearExecution = function () {
+            if (CB.editor != null && CB.editor.instance != null) {
+                CB.editor.instance.setOption("readOnly", false);
+            }
             if ($scope.testCase != null) {
                 for (var i = 0; i < $scope.testCase.children.length; i++) {
                     var testStep = $scope.testCase.children[i];
@@ -812,6 +818,9 @@ angular.module('cb')
         };
 
         $scope.loadTestCase = function (testCase, tab, clear) {
+            if (CB.editor != null && CB.editor.instance != null) {
+                CB.editor.instance.setOption("readOnly", false);
+            }
             var previousId = StorageService.get(StorageService.CB_LOADED_TESTCASE_ID_KEY);
             if(previousId != null)TestCaseService.clearRecords(previousId);
             previousId = StorageService.get(StorageService.CB_LOADED_TESTSTEP_ID_KEY);
