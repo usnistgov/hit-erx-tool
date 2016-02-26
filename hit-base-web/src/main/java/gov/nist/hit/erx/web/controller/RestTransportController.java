@@ -198,6 +198,26 @@ public class RestTransportController {
     }
 
     @Transactional()
+    @RequestMapping(value = "/populateMessage", method = RequestMethod.POST)
+    public TransportResponse populateMessage(@RequestBody TransportRequest request, HttpSession session){
+        Long testStepId = request.getTestStepId();
+        Long userId = SessionContext.getCurrentUserId(session);
+        TransportResponse transportResponse = new TransportResponse();
+        String messageContent = request.getMessage();
+        TestStep testStep = testStepService.findOne(testStepId);
+        if(testStep != null) {
+            TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId, testStep);
+            if(testCaseExecution!=null) {
+                Message message = new Message();
+                message.setContent(messageContent);
+                messageContent = mappingUtils.writeDataInMessage(message, testStep, testCaseExecution);
+            }
+        }
+        transportResponse.setOutgoingMessage(messageContent);
+        return transportResponse;
+    }
+
+    @Transactional()
     @RequestMapping(value = "/send", method = RequestMethod.POST)
     public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
         logger.info("Sending message  with user id=" + request.getUserId() + " and test step with id="
@@ -207,9 +227,9 @@ public class RestTransportController {
             Long userId = SessionContext.getCurrentUserId(session);
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
-                throw new TestCaseException("Unknown test step with id=" + testStepId);
+                throw new TestStepException("Unknown test step with id=" + testStepId);
 
-            Message outgoingMessage = new Message();
+            /*Message outgoingMessage = new Message();
             outgoingMessage.setContent(request.getMessage());
             TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId,testStep);
             TransportConfig config =
@@ -220,6 +240,9 @@ public class RestTransportController {
             outgoingMessage.setContent(responseMessage);
             String incomingMessage =
                     webServiceClient.send(outgoingMessage.getContent(), request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            */
+            String incomingMessage =
+                    webServiceClient.send(request.getMessage(), request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             String tmp = incomingMessage;
             try {
                 incomingMessage = XmlUtil.prettyPrint(incomingMessage);
