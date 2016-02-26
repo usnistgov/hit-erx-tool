@@ -263,7 +263,8 @@ public class RestTransportController {
                 transaction = new Transaction();
                 //transaction.setTestStep(testStepService.findOne(testStepId));
                 transaction.setUser(userRepository.findOne(userId));
-                transaction.setOutgoing(outgoingMessage.getContent());
+                //transaction.setOutgoing(outgoingMessage.getContent());
+                transaction.setOutgoing(request.getMessage());
                 transaction.setIncoming(incomingMessage);
                 transactionService.save(transaction);
             }
