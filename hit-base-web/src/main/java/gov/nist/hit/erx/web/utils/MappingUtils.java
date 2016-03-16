@@ -51,28 +51,39 @@ public class MappingUtils {
             messageParser = new XMLMessageParser();
         }
         if(messageParser!=null){
-            HashMap<String,TestStepFieldPair> keysToFind = new HashMap<>();
+            HashMap<TestStepFieldPair,String> keysToFind = new HashMap<>();
             for(DataMapping dataMapping : testStep.getTestCase().getDataMappings()){
                 if(dataMapping.getSource() instanceof TestStepFieldPair){
                     TestStepFieldPair source = (TestStepFieldPair) dataMapping.getSource();
                     if(source.getTestStep().getId()==testStep.getId()){
-                        keysToFind.put(source.getField(),source);
+                        keysToFind.put(source,source.getField());
                     }
                 }
             }
-            ArrayList<String> dataToBeFound = (ArrayList<String>) setToArrayList(keysToFind.keySet());
+            ArrayList<String> dataToBeFound = new ArrayList<>(keysToFind.values());
             try {
-                Map<String, String> data = messageParser.readInMessage(message, dataToBeFound, testStep.getTestContext());
-                for(String key : data.keySet()){
-                    TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
-                    testCaseExecutionData.setTestStepFieldPair(keysToFind.get(key));
-                    testCaseExecutionData.setData(data.get(key));
-                    testCaseExecutionData.setTestCaseExecution(testCaseExecution);
-                    testCaseExecutionDataService.save(testCaseExecutionData);
-                }
+                Map<String, String> datas = messageParser.readInMessage(message, dataToBeFound, testStep.getTestContext());
+                saveData(keysToFind,datas,testCaseExecution);
             } catch (Exception e) {
                 logger.error(e.getMessage());
                 e.printStackTrace();
+            }
+        }
+    }
+
+    private void saveData(HashMap<TestStepFieldPair,String> keysToFind,Map<String, String> datas,TestCaseExecution testCaseExecution){
+        for(TestStepFieldPair currentTestStepFieldPair : keysToFind.keySet()){
+            String currentField = keysToFind.get(currentTestStepFieldPair);
+            String data = datas.get(currentField);
+            if(data != null && !"".equals(data)){
+                TestCaseExecutionData testCaseExecutionData = new TestCaseExecutionData();
+                testCaseExecutionData.setTestStepFieldPair(currentTestStepFieldPair);
+                testCaseExecutionData.setData(data);
+                testCaseExecutionData.setTestCaseExecution(testCaseExecution);
+                testCaseExecutionDataService.save(testCaseExecutionData);
+                logger.info("Mapping data saved : data mapping with id "+testCaseExecutionData.getTestStepFieldPair().getId()+" and test case execution id "+testCaseExecution.getId()+" TestStep "+testCaseExecutionData.getTestStepFieldPair().getTestStep().getPosition()+" (id="+testCaseExecutionData.getTestStepFieldPair().getTestStep().getId()+"), field : "+testCaseExecutionData.getTestStepFieldPair().getField()+", data : "+testCaseExecutionData.getData());
+            } else {
+                logger.error("Failed to save data : pair with id "+currentTestStepFieldPair.getId()+" and test case execution id "+testCaseExecution.getId()+" TestStep "+currentTestStepFieldPair.getTestStep().getPosition()+" (id="+currentTestStepFieldPair.getTestStep().getId()+"), field : "+currentTestStepFieldPair.getField());
             }
         }
     }
@@ -84,8 +95,12 @@ public class MappingUtils {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId(),testCaseExecution.getId());
-                    if(testCaseExecutionData!=null)
+                    if(testCaseExecutionData!=null) {
                         data = testCaseExecutionData.getData();
+                        logger.info("Mapping data loaded : TestStep " + testCaseExecutionData.getTestStepFieldPair().getTestStep().getPosition() + ", field : " + testCaseExecutionData.getTestStepFieldPair().getField() + ", data : " + testCaseExecutionData.getData());
+                    } else {
+                        logger.info("Failed to load data mapping with id "+dataMapping.getSource().getId()+" and test case execution id "+testCaseExecution.getId()+" from testStep "+((TestStepFieldPair) dataMapping.getSource()).getTestStep().getPosition()+" (id="+((TestStepFieldPair) dataMapping.getSource()).getTestStep().getId()+"), field "+((TestStepFieldPair) dataMapping.getSource()).getField());
+                    }
                 } else if (dataMapping.getSource() instanceof MappingSourceConstant) {
                     MappingSourceConstant mappingSourceConstant = (MappingSourceConstant) dataMapping.getSource();
                     data = mappingSourceConstant.getValue();
