@@ -42,8 +42,12 @@
 			<artifactId>hit-core-transport</artifactId>
 			<version>${hit-core.version}</version>
 		</dependency>
- 		
- 		
+
+		<dependency>
+			<groupId>gov.nist.hit.core</groupId>
+			<artifactId>hit-core-api</artifactId>
+			<version>${hit-core.version}</version>
+		</dependency>
  		
  	</dependencies>
  
