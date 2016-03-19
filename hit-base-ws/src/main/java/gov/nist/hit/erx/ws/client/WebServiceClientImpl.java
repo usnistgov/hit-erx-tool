@@ -1,16 +1,17 @@
 package gov.nist.hit.erx.ws.client;
 
-import com.google.gson.Gson;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import javax.xml.bind.DatatypeConverter;
 
 /**
  * Created by mcl1 on 12/17/15.
@@ -30,34 +31,21 @@ public class WebServiceClientImpl implements WebServiceClient {
 
 
     @Override
-    public String send(String message, String... arguments) throws TransportClientException {
+    public String send(String message, String... arguments) {
         final String username = arguments[0];
         final String password = arguments[1];
         final String endpoint = arguments[2];
 
-        //String plainCreds = username+":"+password;
-        //byte[] plainCredsBytes = plainCreds.getBytes();
-        //byte[] base64CredsBytes = Base64.encodeBase64(plainCredsBytes);
-        //String base64Creds = new String(base64CredsBytes);
-        //HttpHeaders headers = new HttpHeaders();
-        //headers.add("Content-Type","application/json");
-        //headers.add("Authorization", "Basic " + base64Creds);
-        //HttpEntity<String> request = new HttpEntity<>(headers);
-
-        //RestTemplate restTemplate = new RestTemplate();
-        //ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.POST, request,String.class);
-
-        Message body = new Message(message, username, password);
-        Gson gson = new Gson();
+        String plainCreds = username + ":" + password;
+        byte[] plainCredsBytes = plainCreds.getBytes();
+        String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Basic " + base64Creds);
+        HttpEntity<String> request = new HttpEntity<>(message,headers);
         RestTemplate restTemplate = new RestTemplate();
 
-        String requestJson = gson.toJson(body);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-        String answer = restTemplate.postForObject(endpoint, entity, String.class);
-
-        return answer;
+        logger.info("Send to the endpoint : "+endpoint+" with basic auth credentials : "+base64Creds+" message : "+message);
+        ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, String.class);
+        return response.getBody();
     }
 }

@@ -220,7 +220,7 @@ public class RestTransportController {
     @Transactional()
     @RequestMapping(value = "/send", method = RequestMethod.POST)
     public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
-        logger.info("Sending message  with user id=" + request.getUserId() + " and test step with id="
+        logger.info("Sending message  with user id=" + SessionContext.getCurrentUserId(session) + " and test step with id="
                 + request.getTestStepId());
         try {
             Long testStepId = request.getTestStepId();

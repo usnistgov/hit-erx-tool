@@ -1,25 +1,21 @@
 package gov.nist.hit.erx.web.controller;
 
-import com.google.gson.Gson;
-import gov.nist.hit.core.domain.TransportRequest;
 import gov.nist.hit.core.service.exception.MessageParserException;
+import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.erx.ws.client.Message;
 import gov.nist.hit.utils.XMLUtils;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.util.Base64;
 
 /**
  * This software was developed at the National Institute of Standards and Technology by employees of
@@ -31,31 +27,32 @@ import java.util.Base64;
  * used. This software can be redistributed and/or modified freely provided that any derivative
  * works bear some notice that they are derived from it, and any modified versions bear some notice
  * that they have been modified.
- * <p>
+ * <p/>
  * Created by Maxence Lefort on 3/18/16.
  */
 @RestController
 @Controller
 @RequestMapping("/ws/erx/surescript")
-public class SurescriptWebServiceController extends WebServiceController{
+public class SurescriptWebServiceController extends WebServiceController {
 
     @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST)
-    public String message(@RequestBody TransportRequest request) throws TransportClientException, MessageParserException {
-        Gson gson = new Gson();
-        String jsonRequest = gson.toJson(request);
-        Message received = gson.fromJson(jsonRequest, Message.class);
+    public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body) throws TransportClientException, MessageParserException {
         try {
-            String parsedMessage = parseEnveloppe(received.getMessage());
-            received.setMessage(parsedMessage);
-        } catch (IOException e) {
-            e.printStackTrace();
+            String message = parseEnveloppe(body);
+            try {
+                return super.message(message, authorization);
+            } catch (UserNotFoundException e) {
+                e.printStackTrace();
+            }
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return message(received);
+        return "";
     }
 
     private String parseEnveloppe(String wrappedMessage) throws IOException, SAXException, ParserConfigurationException {
@@ -64,10 +61,9 @@ public class SurescriptWebServiceController extends WebServiceController{
         DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
         org.w3c.dom.Document doc = docBuilder.parse(IOUtils.toInputStream(wrappedMessage));
         String encodedEdifactMessage = XMLUtils.getNodeByNameOrXPath("/Message/Body/EDIFACTMessage", doc).getTextContent();
-        message = Base64.getDecoder().decode(encodedEdifactMessage).toString();
+        message = Base64.decodeBase64(encodedEdifactMessage).toString();
         return message;
     }
-
 
 
 }

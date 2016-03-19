@@ -8,6 +8,7 @@ import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.core.xml.domain.XMLTestContext;
 import gov.nist.hit.impl.EdiMessageParser;
 import gov.nist.hit.impl.XMLMessageEditor;
+import org.apache.commons.io.Charsets;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,8 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.xml.bind.DatatypeConverter;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -126,7 +127,7 @@ public class SurescriptTransportController extends TransportController {
                 "    </EDIFACTMessage>" +
                 "</Body>\n" +
                 "</Message>");
-        dataToReplace.put("/Message/Body/EDIFACTMessage", Base64.getEncoder().encodeToString(message.getBytes()));
+        dataToReplace.put("/Message/Body/EDIFACTMessage", DatatypeConverter.printBase64Binary(message.getBytes(Charsets.UTF_8)));
         XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
         wrappedMessage = xmlMessageEditor.replaceInMessage(XMLMessage, (HashMap) dataToReplace, new XMLTestContext());
         return wrappedMessage;
