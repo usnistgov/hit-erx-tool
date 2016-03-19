@@ -168,7 +168,7 @@ public abstract class TransportController {
         return transaction;
     }
 
-    public TransportResponse doPopulateMessage(TransportRequest request, HttpSession session) {
+    public TransportResponse populateMessage(TransportRequest request, HttpSession session) {
         Long testStepId = request.getTestStepId();
         Long userId = SessionContext.getCurrentUserId(session);
         TransportResponse transportResponse = new TransportResponse();

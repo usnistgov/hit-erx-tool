@@ -79,7 +79,7 @@ public class SurescriptTransportController extends TransportController {
     @Transactional()
     @RequestMapping(value = "/populateMessage", method = RequestMethod.POST)
     public TransportResponse populateMessage(@RequestBody TransportRequest request, HttpSession session) {
-        return doPopulateMessage(request, session);
+        return super.populateMessage(request, session);
     }
 
     @Transactional()
