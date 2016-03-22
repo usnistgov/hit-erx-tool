@@ -91,7 +91,7 @@ public class MappingUtils {
     public String writeDataInMessage(Message message, TestStep testStep, TestCaseExecution testCaseExecution){
         HashMap<String,String> dataToReplaceInMessage = new HashMap<>();
         for(DataMapping dataMapping : testStep.getTestCase().getDataMappings()) {
-            if (dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
+            if (null != dataMapping.getTarget().getTestStep() && dataMapping.getTarget().getTestStep().getId() == testStep.getId()) {
                 String data = "";
                 if (dataMapping.getSource() instanceof TestStepFieldPair) {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId(),testCaseExecution.getId());

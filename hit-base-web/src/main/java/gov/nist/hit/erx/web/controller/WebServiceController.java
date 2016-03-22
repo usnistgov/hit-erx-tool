@@ -19,12 +19,14 @@ import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.xml.sax.SAXException;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -75,8 +77,8 @@ public abstract class WebServiceController {
     protected TestStepUtils testStepUtils;
 
     @Transactional()
-    @RequestMapping(value = "/message", method = RequestMethod.POST)
     public String message(String message,String authorization) throws TransportClientException, MessageParserException, UserNotFoundException {
+        //todo put basic auth in response ? (get in ta info)
         if (authorization != null && authorization.startsWith("Basic")) {
             authorization = authorization.replace("Basic ", "").trim();
             String[] credentials = (new String(Base64.decodeBase64(authorization), Charset.forName("UTF-8")).split(":"));
@@ -88,13 +90,17 @@ public abstract class WebServiceController {
                 criteria.put("username", username);
                 criteria.put("password", password);
                 Long userId = userConfigService.findUserIdByProperties(criteria);
+                Long messageId = transportMessageService.findMessageIdByProperties(criteria);
+                if(messageId==null){
+                    return "Error : Listener not started for user "+username+".";
+                }
                 if(userId==null){
                     throw new UserNotFoundException();
                 }
+
                 Transaction transaction = new Transaction();
                 transaction.setProperties(criteria);
                 transaction.setIncoming(message);
-                Long messageId = transportMessageService.findMessageIdByProperties(criteria);
                 gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
                 TestContext testContext = null;
                 if (messageId != null) {
