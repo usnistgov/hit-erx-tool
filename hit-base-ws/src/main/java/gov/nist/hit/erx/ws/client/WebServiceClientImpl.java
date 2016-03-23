@@ -1,13 +1,13 @@
 package gov.nist.hit.erx.ws.client;
 
 import gov.nist.hit.core.transport.exception.TransportClientException;
+import org.apache.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.*;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,6 +41,7 @@ public class WebServiceClientImpl implements WebServiceClient {
         String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Basic " + base64Creds);
+        headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE,MediaType.TEXT_XML_VALUE);
         HttpEntity<String> request = new HttpEntity<>(message,headers);
         RestTemplate restTemplate = new RestTemplate();
 

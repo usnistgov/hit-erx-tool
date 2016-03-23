@@ -86,10 +86,10 @@ public abstract class TransportController {
             throws UserNotFoundException {
         logger.info("Fetching user configuration information ... ");
         Long userId = SessionContext.getCurrentUserId(session);
-        User user = null;
-        if (userId == null || (user = userService.findOne(userId)) == null) {
+        if (userId == null) {
             throw new UserNotFoundException();
         }
+        User user = userService.findOne(userId);
         TransportConfig transportConfig =
                 transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
         if (transportConfig == null) {

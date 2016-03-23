@@ -36,7 +36,7 @@ import java.io.IOException;
 public class SurescriptWebServiceController extends WebServiceController {
 
     @Transactional()
-    @RequestMapping(value = "/message", method = RequestMethod.POST)
+    @RequestMapping(value = "/message", method = RequestMethod.POST,produces = "text/xml")
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body) throws TransportClientException, MessageParserException {
         try {
             String message = parseEnveloppe(body);
