@@ -1,19 +1,20 @@
 package gov.nist.hit.erx.web.controller;
 
+import gov.nist.hit.core.domain.TestContext;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.utils.XMLUtils;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.IOUtils;
+import gov.nist.hit.erx.web.utils.SurescriptUtils;
+import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 
@@ -35,34 +36,33 @@ import java.io.IOException;
 @RequestMapping("/ws/erx/surescript")
 public class SurescriptWebServiceController extends WebServiceController {
 
+    private final static String DOMAIN = "erx";
+    private final static String PROTOCOL = "surescript";
+
+    @Autowired
+    protected TestCaseExecutionUtils testCaseExecutionUtils;
+
     @Transactional()
-    @RequestMapping(value = "/message", method = RequestMethod.POST,produces = "text/xml")
-    public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body) throws TransportClientException, MessageParserException {
+    @RequestMapping(value = "/message", method = RequestMethod.POST, produces = "text/xml")
+    public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException {
         try {
-            String message = parseEnveloppe(body);
-            try {
-                return super.message(message, authorization);
-            } catch (UserNotFoundException e) {
-                e.printStackTrace();
-            }
+            String message = SurescriptUtils.parseEnveloppe(body);
+            String outgoing = super.message(message, authorization);
+            TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization))).getCurrentTestStepId()).getTestContext();
+            response = super.setBasicAuth(authorization, response,PROTOCOL,DOMAIN);
+            return SurescriptUtils.addEnveloppe(outgoing, testContext);
+        } catch (UserNotFoundException e) {
+            e.printStackTrace();
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return "";
-    }
-
-    private String parseEnveloppe(String wrappedMessage) throws IOException, SAXException, ParserConfigurationException {
-        String message = "";
-        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-        org.w3c.dom.Document doc = docBuilder.parse(IOUtils.toInputStream(wrappedMessage));
-        String encodedEdifactMessage = XMLUtils.getNodeByNameOrXPath("/Message/Body/EDIFACTMessage", doc).getTextContent();
-        message = Base64.decodeBase64(encodedEdifactMessage).toString();
-        return message;
     }
 
 

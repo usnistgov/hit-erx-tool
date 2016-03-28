@@ -186,42 +186,43 @@ public abstract class TransportController {
         return transportResponse;
     }
 
-    public Transaction send(TransportRequest request,String message,TestStep testStep,HttpSession session) throws TransportClientException {
+    public String send(TransportRequest request,String message) throws TransportClientException {
         try {
-            Long userId = SessionContext.getCurrentUserId(session);
-            String incomingMessage =
-                    webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
-            String tmp = incomingMessage;
-            try {
-                incomingMessage = XmlUtil.prettyPrint(incomingMessage);
-            } catch (Exception e) {
-                incomingMessage = tmp;
-            }
-
-            //Read data in the received message
-            TestStep nextTestStep = testStepUtils.findNext(testStep);
-            if (nextTestStep != null) {
-                Message message2 = new Message();
-                message2.setContent(incomingMessage);
-                mappingUtils.readDatasFromMessage(message2, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(userId, nextTestStep));
-            }
-
-            Transaction transaction = transactionService.findOneByUserAndTestStep(userId, testStep.getId());
-            if (transaction == null) {
-                transaction = new Transaction();
-                //transaction.setTestStep(testStepService.findOne(testStepId));
-                transaction.setUser(userRepository.findOne(userId));
-                //transaction.setOutgoing(outgoingMessage.getContent());
-                transaction.setOutgoing(request.getMessage());
-                transaction.setIncoming(incomingMessage);
-                transactionService.save(transaction);
-            }
-
-            return transaction;
+            return webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
         } catch (Exception e1) {
             logger.error(e1.toString());
             throw new TransportClientException("Failed to send the message." + e1.getMessage());
         }
+    }
+
+    public void parseIncomingMessage(String incomingMessage,TestStep testStep,Long userId){
+        String tmp = incomingMessage;
+        try {
+            incomingMessage = XmlUtil.prettyPrint(incomingMessage);
+        } catch (Exception e) {
+            incomingMessage = tmp;
+        }
+        //Read data in the received message
+        TestStep nextTestStep = testStepUtils.findNext(testStep);
+        if (nextTestStep != null) {
+            Message message2 = new Message();
+            message2.setContent(incomingMessage);
+            mappingUtils.readDatasFromMessage(message2, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(userId, nextTestStep));
+        }
+    }
+
+    protected Transaction saveTransaction(Long userId,TestStep testStep,String incoming,String outgoing){
+        Transaction transaction = transactionService.findOneByUserAndTestStep(userId, testStep.getId());
+        if (transaction == null) {
+            transaction = new Transaction();
+            //transaction.setTestStep(testStepService.findOne(testStepId));
+            transaction.setUser(userRepository.findOne(userId));
+            //transaction.setOutgoing(outgoingMessage.getContent());
+            transaction.setOutgoing(outgoing);
+            transaction.setIncoming(incoming);
+            transactionService.save(transaction);
+        }
+        return transaction;
     }
 
 

@@ -1,11 +1,13 @@
 package gov.nist.hit.erx.web.controller;
 
 
+import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.core.xml.domain.XMLTestContext;
+import gov.nist.hit.erx.web.utils.SurescriptUtils;
 import gov.nist.hit.impl.EdiMessageParser;
 import gov.nist.hit.impl.XMLMessageEditor;
 import org.apache.commons.io.Charsets;
@@ -92,44 +94,15 @@ public class SurescriptTransportController extends TransportController {
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestStepException("Unknown test step with id=" + testStepId);
-            Message toBeParsedMessage = new Message();
-            toBeParsedMessage.setContent(request.getMessage());
-            EdiMessageParser ediMessageParser = new EdiMessageParser();
-            ArrayList<String> dataToRead = new ArrayList<>();
-            String messageIDField = "UIB-030-01";
-            dataToRead.add(messageIDField);
-            Map<String, String> dataRead = ediMessageParser.readInMessage(toBeParsedMessage, dataToRead, testStep.getTestContext());
-            if (dataRead.containsKey(messageIDField)) {
-                dataRead.put("/Message/Header/MessageID", dataRead.get(messageIDField));
-                dataRead.remove(messageIDField);
-            }
-            String message = addEnveloppe(toBeParsedMessage.getContent(), dataRead);
-            return send(request, message, testStep, session);
+            String message = SurescriptUtils.addEnveloppe(request.getMessage(), testStep.getTestContext());
+            String incoming = send(request,message);
+            //TODO transform incoming
+            String edifact = SurescriptUtils.parseEnveloppe(incoming);;
+            Long userId = SessionContext.getCurrentUserId(session);
+            parseIncomingMessage(edifact,testStep,userId);
+            return super.saveTransaction(userId,testStep,edifact,message);
         } catch (Exception e1) {
-            logger.error(e1.toString());
-            throw new TransportClientException("Failed to send the message." + e1.getMessage());
+            throw new TransportClientException("Failed to send the message.");
         }
-    }
-
-    private String addEnveloppe(String message, Map<String, String> dataToReplace) throws Exception {
-        String wrappedMessage = "";
-        Message XMLMessage = new Message();
-        XMLMessage.setContent("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">\n" +
-                "    <Header>\n" +
-                "        <To Qualifier=\"P\">RECIPIENT_ID</To>\n" +
-                "        <From Qualifier=\"D\">SENDER_ID</From>\n" +
-                "        <MessageID>90927</MessageID>\n" +
-                "        <SentTime>2015-11-20T14:15:23</SentTime>\n" +
-                "    </Header>\n" +
-                "    <Body>" +
-                "<EDIFACTMessage>\n" +
-                "    </EDIFACTMessage>" +
-                "</Body>\n" +
-                "</Message>");
-        dataToReplace.put("/Message/Body/EDIFACTMessage", DatatypeConverter.printBase64Binary(message.getBytes(Charsets.UTF_8)));
-        XMLMessageEditor xmlMessageEditor = new XMLMessageEditor();
-        wrappedMessage = xmlMessageEditor.replaceInMessage(XMLMessage, (HashMap) dataToReplace, new XMLTestContext());
-        return wrappedMessage;
     }
 }

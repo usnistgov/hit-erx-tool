@@ -4,10 +4,7 @@ import com.google.gson.Gson;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.repo.MessageRepository;
 import gov.nist.hit.core.repo.TestContextRepository;
-import gov.nist.hit.core.service.TestStepService;
-import gov.nist.hit.core.service.TransactionService;
-import gov.nist.hit.core.service.TransportMessageService;
-import gov.nist.hit.core.service.UserConfigService;
+import gov.nist.hit.core.service.*;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
@@ -15,6 +12,7 @@ import gov.nist.hit.erx.web.utils.MappingUtils;
 import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
 import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.ws.client.Message;
+import hl7.v2.validation.vs.CodeUsage;
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.xml.sax.SAXException;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -62,6 +61,9 @@ public abstract class WebServiceController {
     protected TestContextRepository testContextRepository;
 
     @Autowired
+    protected TransportConfigService transportConfigService;
+
+    @Autowired
     protected UserConfigService userConfigService;
 
     @Autowired
@@ -76,83 +78,89 @@ public abstract class WebServiceController {
     @Autowired
     protected TestStepUtils testStepUtils;
 
-    @Transactional()
-    public String message(String message,String authorization) throws TransportClientException, MessageParserException, UserNotFoundException {
-        //todo put basic auth in response ? (get in ta info)
+    public Map<String,String> getCriteriaFromBasicAuth(String authorization){
         if (authorization != null && authorization.startsWith("Basic")) {
             authorization = authorization.replace("Basic ", "").trim();
             String[] credentials = (new String(Base64.decodeBase64(authorization), Charset.forName("UTF-8")).split(":"));
             if (credentials.length == 2) {
                 String username = credentials[0];
                 String password = credentials[1];
-                Message messageObject = new Message(message, username, password);
                 Map<String, String> criteria = new HashMap<>();
                 criteria.put("username", username);
                 criteria.put("password", password);
-                Long userId = userConfigService.findUserIdByProperties(criteria);
-                Long messageId = transportMessageService.findMessageIdByProperties(criteria);
-                if(messageId==null){
-                    return "Error : Listener not started for user "+username+".";
-                }
-                if(userId==null){
-                    throw new UserNotFoundException();
-                }
+                return criteria;
+            }
+        }
+        return null;
+    }
 
-                Transaction transaction = new Transaction();
-                transaction.setProperties(criteria);
-                transaction.setIncoming(message);
-                gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
-                TestContext testContext = null;
-                if (messageId != null) {
-                    outgoingMessage.setContent(messageRepository.getContentById(messageId));
-                    if (outgoingMessage.getContent() != null) {
-                        testContext = testContextRepository.findOneByMessageId(messageId);
-                    } else {
-                        throw new TransportClientException("Message with id " + messageId + " not found");
-                    }
-                } else {
-                    throw new TransportClientException("Message id not found for criteria " + criteria.toString());
-                }
-                if (testContext != null) {
-                    TestStep currentTestStep = testStepService.findOneByTestContext(testContext.getId());
-                    TestCaseExecution testCaseExecution = testCaseExecutionUtils.findOne(userId);
-                    if (testCaseExecution != null) {
-                        TestCase testCase = currentTestStep.getTestCase();
-                        testCaseExecution.setTestCase(testCase);
-                        testCaseExecution.setCurrentTestStepId(currentTestStep.getId());
-                        gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
-                        receivedMessage.setContent(message);
-                        TestStep receivedMessageTestStep = testStepUtils.findPrevious(currentTestStep);
-                        mappingUtils.readDatasFromMessage(receivedMessage, receivedMessageTestStep,testCaseExecution);
-                        String content = mappingUtils.writeDataInMessage(outgoingMessage, currentTestStep, testCaseExecution);
-                        outgoingMessage.setContent(content);
-                        //Note : There shouldn't be any information to be read from the message we send, this is just a security net
-                        //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);
-                        transaction.setOutgoing(content);
-                    }
-                }
-                transactionService.save(transaction);
-                return transaction.getOutgoing();
-
-            } else {
-                //Invalid credentials in the request headers
+    @Transactional()
+    public String message(String message,String authorization) throws TransportClientException, MessageParserException, UserNotFoundException {
+        //todo put basic auth in response ? (get in ta info)
+        Map<String, String> criteria = getCriteriaFromBasicAuth(authorization);
+        if(criteria!=null){
+            Long userId = userConfigService.findUserIdByProperties(criteria);
+            Long messageId = transportMessageService.findMessageIdByProperties(criteria);
+            if(messageId==null){
+                return "Error : Listener not started for user "+criteria.get("username")+".";
+            }
+            if(userId==null){
                 throw new UserNotFoundException();
             }
-
-
-
-
-
-
-
-        } else {
-            //Invalid credentials in the request headers, no basic auth
-            throw new UserNotFoundException();
+            Transaction transaction = new Transaction();
+            transaction.setProperties(criteria);
+            transaction.setIncoming(message);
+            gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
+            TestContext testContext = null;
+            if (messageId != null) {
+                outgoingMessage.setContent(messageRepository.getContentById(messageId));
+                if (outgoingMessage.getContent() != null) {
+                    testContext = testContextRepository.findOneByMessageId(messageId);
+                } else {
+                    throw new TransportClientException("Message with id " + messageId + " not found");
+                }
+            } else {
+                throw new TransportClientException("Message id not found for criteria " + criteria.toString());
+            }
+            if (testContext != null) {
+                TestStep currentTestStep = testStepService.findOneByTestContext(testContext.getId());
+                TestCaseExecution testCaseExecution = testCaseExecutionUtils.findOne(userId);
+                if (testCaseExecution != null) {
+                    TestCase testCase = currentTestStep.getTestCase();
+                    testCaseExecution.setTestCase(testCase);
+                    testCaseExecution.setCurrentTestStepId(currentTestStep.getId());
+                    gov.nist.hit.core.domain.Message receivedMessage = new gov.nist.hit.core.domain.Message();
+                    receivedMessage.setContent(message);
+                    TestStep receivedMessageTestStep = testStepUtils.findPrevious(currentTestStep);
+                    mappingUtils.readDatasFromMessage(receivedMessage, receivedMessageTestStep,testCaseExecution);
+                    String content = mappingUtils.writeDataInMessage(outgoingMessage, currentTestStep, testCaseExecution);
+                    outgoingMessage.setContent(content);
+                    //Note : There shouldn't be any information to be read from the message we send, this is just a security net
+                    //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);
+                    transaction.setOutgoing(content);
+                }
+            }
+            transactionService.save(transaction);
+            return transaction.getOutgoing();
         }
+        return null;
+    }
 
+    private Map<String, String> getSutInitiatorConfig(Long userId, String PROTOCOL, String DOMAIN) {
+        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
+        Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
+        if (sutInitiator == null || sutInitiator.isEmpty())
+            throw new gov.nist.hit.core.service.exception.TransportException(
+                    "No System Under Test configuration info found");
+        return sutInitiator;
+    }
 
-
-
-
+    public HttpServletResponse setBasicAuth(String authorization,HttpServletResponse response, String PROTOCOL, String DOMAIN) {
+        Map<String, String> credentials = getSutInitiatorConfig(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization)), PROTOCOL,DOMAIN);
+        String plainCreds = credentials.get("username") + ":" + credentials.get("password");
+        byte[] plainCredsBytes = plainCreds.getBytes();
+        String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
+        response.setHeader("Authorization", "Basic " + base64Creds);
+        return response;
     }
 }

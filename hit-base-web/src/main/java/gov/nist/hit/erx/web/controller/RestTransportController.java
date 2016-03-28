@@ -80,6 +80,9 @@ public class RestTransportController extends TransportController {
         TestStep testStep = testStepService.findOne(testStepId);
         if (testStep == null)
             throw new TestStepException("Unknown test step with id=" + testStepId);
-        return send(request, request.getMessage(), testStep, session);
+        String incoming = send(request,request.getMessage());
+        Long userId = SessionContext.getCurrentUserId(session);
+        parseIncomingMessage(incoming,testStep,userId);
+        return saveTransaction(userId,testStep,incoming,request.getMessage());
     }
 }
