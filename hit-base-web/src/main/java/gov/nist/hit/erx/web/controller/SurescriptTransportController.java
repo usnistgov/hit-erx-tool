@@ -6,11 +6,7 @@ import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
-import gov.nist.hit.core.xml.domain.XMLTestContext;
 import gov.nist.hit.erx.web.utils.SurescriptUtils;
-import gov.nist.hit.impl.EdiMessageParser;
-import gov.nist.hit.impl.XMLMessageEditor;
-import org.apache.commons.io.Charsets;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,8 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.xml.bind.DatatypeConverter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 

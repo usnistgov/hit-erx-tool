@@ -97,7 +97,7 @@ public class MappingUtils {
                     TestCaseExecutionData testCaseExecutionData = testCaseExecutionDataService.getTestCaseExecutionData(dataMapping.getSource().getId(),testCaseExecution.getId());
                     if(testCaseExecutionData!=null) {
                         data = testCaseExecutionData.getData();
-                        logger.info("Mapping data loaded : TestStep " + testCaseExecutionData.getTestStepFieldPair().getTestStep().getPosition() + ", field : " + testCaseExecutionData.getTestStepFieldPair().getField() + ", data : " + testCaseExecutionData.getData());
+                        logger.info("Mapping data loaded : TestStep " + testCaseExecutionData.getTestStepFieldPair().getTestStep().getPosition() + ", field : " + testCaseExecutionData.getTestStepFieldPair().getField() + ", data : " + testCaseExecutionData.getData() +" into TestStep : "+dataMapping.getTarget().getTestStep().getPosition()+"field " + dataMapping.getTarget().getField());
                     } else {
                         logger.info("Failed to load data mapping with id "+dataMapping.getSource().getId()+" and test case execution id "+testCaseExecution.getId()+" from testStep "+((TestStepFieldPair) dataMapping.getSource()).getTestStep().getPosition()+" (id="+((TestStepFieldPair) dataMapping.getSource()).getTestStep().getId()+"), field "+((TestStepFieldPair) dataMapping.getSource()).getField());
                     }

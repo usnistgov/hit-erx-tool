@@ -72,6 +72,7 @@ public class SurescriptUtils {
     }
 
     public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier,String sentTime) throws Exception {
+        message = message.replace("\n","");
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">\n" +
                 "    <Header>\n" +
