@@ -112,7 +112,7 @@ public abstract class WebServiceController {
             String formattedMessage = message;
             if(formattedMessage.startsWith("UNA")&&formattedMessage.length()>=9){
                 //UNA:+./*'
-                String lineSeparator = formattedMessage.substring(8, 1);
+                String lineSeparator = formattedMessage.substring(8, 9);
                 formattedMessage = formattedMessage.replace(lineSeparator,lineSeparator+"\n");
             } else {
                 formattedMessage = formattedMessage.replace(">",">\n");
