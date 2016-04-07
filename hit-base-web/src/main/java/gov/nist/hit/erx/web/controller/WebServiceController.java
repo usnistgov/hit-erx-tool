@@ -109,7 +109,15 @@ public abstract class WebServiceController {
             }
             Transaction transaction = new Transaction();
             transaction.setProperties(criteria);
-            transaction.setIncoming(message);
+            String formattedMessage = message;
+            if(formattedMessage.startsWith("UNA")&&formattedMessage.length()>=9){
+                //UNA:+./*'
+                String lineSeparator = formattedMessage.substring(8, 1);
+                formattedMessage = formattedMessage.replace(lineSeparator,lineSeparator+"\n");
+            } else {
+                formattedMessage = formattedMessage.replace(">",">\n");
+            }
+            transaction.setIncoming(formattedMessage);
             gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
             TestContext testContext = null;
             if (messageId != null) {

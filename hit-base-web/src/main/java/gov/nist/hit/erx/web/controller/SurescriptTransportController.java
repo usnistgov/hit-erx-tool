@@ -91,7 +91,12 @@ public class SurescriptTransportController extends TransportController {
             String message = SurescriptUtils.addEnveloppe(request.getMessage(), testStep.getTestContext());
             String incoming = send(request,message);
             //TODO transform incoming
-            String edifact = SurescriptUtils.parseEnveloppe(incoming);;
+            String edifact;
+            if(incoming!=null) {
+                 edifact = SurescriptUtils.parseEnveloppe(incoming);
+            } else {
+                edifact = "";
+            }
             Long userId = SessionContext.getCurrentUserId(session);
             parseIncomingMessage(edifact,testStep,userId);
             return super.saveTransaction(userId,testStep,edifact,message);
