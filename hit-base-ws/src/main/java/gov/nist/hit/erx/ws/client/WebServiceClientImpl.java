@@ -1,17 +1,23 @@
 package gov.nist.hit.erx.ws.client;
 
-import gov.nist.hit.core.transport.exception.TransportClientException;
-import org.apache.http.*;
+import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+import java.io.StringReader;
+import java.io.StringWriter;
 
 /**
  * Created by mcl1 on 12/17/15.
@@ -41,12 +47,13 @@ public class WebServiceClientImpl implements WebServiceClient {
         String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Basic " + base64Creds);
-        headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE,MediaType.TEXT_XML_VALUE);
-        HttpEntity<String> request = new HttpEntity<>(message,headers);
+        headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
+        HttpEntity<String> request = new HttpEntity<>(message, headers);
         RestTemplate restTemplate = new RestTemplate();
 
-        logger.info("Send to the endpoint : "+endpoint+" with basic auth credentials : "+base64Creds+" message : "+message);
+        logger.info("Send to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds + " message : " + message);
         ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, String.class);
-        return response.getBody();
+        String messageReceived = MessageUtils.prettyPrint(response.getBody());
+        return messageReceived;
     }
 }

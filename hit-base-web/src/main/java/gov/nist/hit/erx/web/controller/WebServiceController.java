@@ -12,6 +12,7 @@ import gov.nist.hit.erx.web.utils.MappingUtils;
 import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
 import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.ws.client.Message;
+import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import hl7.v2.validation.vs.CodeUsage;
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
@@ -109,14 +110,7 @@ public abstract class WebServiceController {
             }
             Transaction transaction = new Transaction();
             transaction.setProperties(criteria);
-            String formattedMessage = message;
-            if(formattedMessage.startsWith("UNA")&&formattedMessage.length()>=9){
-                //UNA:+./*'
-                String lineSeparator = formattedMessage.substring(8, 9);
-                formattedMessage = formattedMessage.replace(lineSeparator,lineSeparator+"\n");
-            } else {
-                formattedMessage = formattedMessage.replace(">",">\n");
-            }
+            String formattedMessage = MessageUtils.prettyPrint(message);
             transaction.setIncoming(formattedMessage);
             gov.nist.hit.core.domain.Message outgoingMessage = new gov.nist.hit.core.domain.Message();
             TestContext testContext = null;

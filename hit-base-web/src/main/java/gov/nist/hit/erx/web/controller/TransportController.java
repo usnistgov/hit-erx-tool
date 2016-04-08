@@ -255,4 +255,7 @@ public abstract class TransportController {
     }
 
 
+    public String removeCarriageReturn(String message) {
+        return message.replace("\n","");
+    }
 }

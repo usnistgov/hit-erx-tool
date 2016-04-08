@@ -88,7 +88,8 @@ public class SurescriptTransportController extends TransportController {
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestStepException("Unknown test step with id=" + testStepId);
-            String message = SurescriptUtils.addEnveloppe(request.getMessage(), testStep.getTestContext());
+            String outgoingMessage = super.removeCarriageReturn(request.getMessage());
+            String message = SurescriptUtils.addEnveloppe(outgoingMessage, testStep.getTestContext());
             String incoming = send(request,message);
             //TODO transform incoming
             String edifact;

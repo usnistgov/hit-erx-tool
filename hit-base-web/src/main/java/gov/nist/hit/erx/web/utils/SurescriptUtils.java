@@ -72,20 +72,20 @@ public class SurescriptUtils {
     }
 
     public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier,String sentTime) throws Exception {
-        message = message.replace("\n","");
-        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">\n" +
-                "    <Header>\n" +
-                "        <To Qualifier=\"P\">"+toQualifier+"</To>\n" +
-                "        <From Qualifier=\"D\">"+fromQualifier+"</From>\n" +
-                "        <MessageID>"+messageID+"</MessageID>\n" +
-                "        <SentTime>"+sentTime+"</SentTime>\n" +
-                "    </Header>\n" +
+        //message = message.replace("\n","");
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+                "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">" +
+                "    <Header>" +
+                "        <To Qualifier=\"P\">"+toQualifier+"</To>" +
+                "        <From Qualifier=\"D\">"+fromQualifier+"</From>" +
+                "        <MessageID>"+messageID+"</MessageID>" +
+                "        <SentTime>"+sentTime+"</SentTime>" +
+                "    </Header>" +
                 "    <Body>" +
-                "<EDIFACTMessage>\n" +
+                "<EDIFACTMessage>" +
                 DatatypeConverter.printBase64Binary(message.getBytes(Charsets.UTF_8))+
                 "    </EDIFACTMessage>" +
-                "</Body>\n" +
+                "</Body>" +
                 "</Message>";
     }
 
@@ -93,7 +93,7 @@ public class SurescriptUtils {
         String message = "";
         DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-        org.w3c.dom.Document doc = docBuilder.parse(IOUtils.toInputStream(wrappedMessage.replace("\n","")));
+        org.w3c.dom.Document doc = docBuilder.parse(IOUtils.toInputStream(wrappedMessage));
         String encodedEdifactMessage = XMLUtils.getNodeByNameOrXPath("/Message/Body/EDIFACTMessage", doc).getTextContent();
         message = new String(Base64.decodeBase64(encodedEdifactMessage), Charsets.UTF_8);
         return message;
