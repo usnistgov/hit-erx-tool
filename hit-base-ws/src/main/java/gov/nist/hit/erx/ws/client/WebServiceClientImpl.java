@@ -1,10 +1,13 @@
 package gov.nist.hit.erx.ws.client;
 
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
+import org.apache.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,6 +51,7 @@ public class WebServiceClientImpl implements WebServiceClient {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Basic " + base64Creds);
         headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
+        headers.add(org.apache.http.HttpHeaders.ACCEPT, MediaType.TEXT_XML_VALUE);
         HttpEntity<String> request = new HttpEntity<>(message, headers);
         RestTemplate restTemplate = new RestTemplate();
 
