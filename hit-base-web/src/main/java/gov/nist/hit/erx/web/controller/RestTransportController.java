@@ -6,6 +6,7 @@ import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
+import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -80,7 +81,7 @@ public class RestTransportController extends TransportController {
         TestStep testStep = testStepService.findOne(testStepId);
         if (testStep == null)
             throw new TestStepException("Unknown test step with id=" + testStepId);
-        String outgoingMessage = super.removeCarriageReturn(request.getMessage());
+        String outgoingMessage = MessageUtils.cleanToSend(request.getMessage());
         String incoming = send(request,outgoingMessage);
         Long userId = SessionContext.getCurrentUserId(session);
         parseIncomingMessage(incoming,testStep,userId);

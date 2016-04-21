@@ -7,6 +7,7 @@ import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.SurescriptUtils;
+import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -88,7 +89,7 @@ public class SurescriptTransportController extends TransportController {
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestStepException("Unknown test step with id=" + testStepId);
-            String outgoingMessage = super.removeCarriageReturn(request.getMessage());
+            String outgoingMessage = MessageUtils.cleanToSend(request.getMessage());
             String message = SurescriptUtils.addEnveloppe(outgoingMessage, testStep.getTestContext());
             String incoming = send(request,message);
             //TODO transform incoming

@@ -188,7 +188,9 @@ public abstract class TransportController {
 
     public String send(TransportRequest request,String message) throws TransportClientException {
         try {
-            return webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            logger.info("Response received : "+incoming);
+            return incoming;
         } catch (Exception e1) {
             logger.error(e1.toString());
             throw new TransportClientException("Failed to send the message." + e1.getMessage());
@@ -252,10 +254,5 @@ public abstract class TransportController {
     private boolean userExist(Long userId) {
         User user = userService.findOne(userId);
         return user != null;
-    }
-
-
-    public String removeCarriageReturn(String message) {
-        return message.replace("\n","");
     }
 }

@@ -29,7 +29,8 @@ public class MessageUtils {
             message = message.replace("\n","");
             //UNA:+./*'
             String lineSeparator = message.substring(8, 9);
-            message = message.replace(lineSeparator, lineSeparator + "\n").substring(0,message.length()-"\n".length());
+            message = message.replace(lineSeparator, lineSeparator + "\n");
+            message = message.substring(0,message.length()-"\n".length());
         } else {
             try {
                 Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -47,5 +48,9 @@ public class MessageUtils {
             }
         }
         return message;
+    }
+
+    public static String cleanToSend(String message) {
+        return message.replace("\n","");
     }
 }

@@ -136,10 +136,9 @@ public abstract class WebServiceController {
                     TestStep receivedMessageTestStep = testStepUtils.findPrevious(currentTestStep);
                     mappingUtils.readDatasFromMessage(receivedMessage, receivedMessageTestStep,testCaseExecution);
                     String content = mappingUtils.writeDataInMessage(outgoingMessage, currentTestStep, testCaseExecution);
-                    outgoingMessage.setContent(content);
                     //Note : There shouldn't be any information to be read from the message we send, this is just a security net
                     //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);
-                    transaction.setOutgoing(content);
+                    transaction.setOutgoing(MessageUtils.cleanToSend(content));
                 }
             }
             transactionService.save(transaction);
