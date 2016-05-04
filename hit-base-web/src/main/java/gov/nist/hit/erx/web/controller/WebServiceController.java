@@ -138,11 +138,11 @@ public abstract class WebServiceController {
                     String content = mappingUtils.writeDataInMessage(outgoingMessage, currentTestStep, testCaseExecution);
                     //Note : There shouldn't be any information to be read from the message we send, this is just a security net
                     //mappingUtils.readDatasFromMessage(outgoingMessage, responseTestStep, testCaseExecution);
-                    transaction.setOutgoing(MessageUtils.cleanToSend(content));
+                    transaction.setOutgoing(MessageUtils.prettyPrint(content));
                 }
             }
             transactionService.save(transaction);
-            return transaction.getOutgoing();
+            return MessageUtils.cleanToSend(transaction.getOutgoing());
         }
         return null;
     }

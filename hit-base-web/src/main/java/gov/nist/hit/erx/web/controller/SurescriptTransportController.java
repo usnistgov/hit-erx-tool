@@ -101,7 +101,7 @@ public class SurescriptTransportController extends TransportController {
             }
             Long userId = SessionContext.getCurrentUserId(session);
             parseIncomingMessage(edifact,testStep,userId);
-            return super.saveTransaction(userId,testStep,edifact,message);
+            return super.saveTransaction(userId,testStep,MessageUtils.prettyPrint(edifact),message);
         } catch (Exception e1) {
             throw new TransportClientException("Failed to send the message.");
         }

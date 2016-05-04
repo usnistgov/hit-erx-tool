@@ -94,7 +94,7 @@ public class SurescriptUtils {
         DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
         org.w3c.dom.Document doc = docBuilder.parse(IOUtils.toInputStream(wrappedMessage));
-        String encodedEdifactMessage = XMLUtils.getNodeByNameOrXPath("/Message/Body/EDIFACTMessage", doc).getTextContent();
+        String encodedEdifactMessage = XMLUtils.getNodesByNameOrXPath("/Message/Body/EDIFACTMessage", doc).item(0).getTextContent();
         message = new String(Base64.decodeBase64(encodedEdifactMessage), Charsets.UTF_8);
         return message;
     }
