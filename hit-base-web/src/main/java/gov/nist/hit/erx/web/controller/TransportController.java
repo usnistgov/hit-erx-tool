@@ -1,11 +1,10 @@
 package gov.nist.hit.erx.web.controller;
 
+import gov.nist.auth.hit.core.domain.Account;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
-import gov.nist.hit.core.repo.UserRepository;
 import gov.nist.hit.core.service.*;
-import gov.nist.hit.core.service.exception.TestStepException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
 import gov.nist.hit.core.transport.exception.TransportClientException;
 import gov.nist.hit.erx.web.utils.MappingUtils;
@@ -13,19 +12,19 @@ import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
 import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.web.utils.Utils;
 import gov.nist.hit.erx.ws.client.WebServiceClient;
-import gov.nist.hit.impl.EdiMessageParser;
-import org.apache.xalan.xsltc.DOM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * This software was developed at the National Institute of Standards and Technology by employees of
@@ -51,8 +50,6 @@ public abstract class TransportController {
     @Autowired
     protected TestStepService testStepService;
 
-    @Autowired
-    protected UserRepository userRepository;
 
     @Autowired
     protected TransactionService transactionService;
@@ -80,23 +77,22 @@ public abstract class TransportController {
     protected WebServiceClient webServiceClient;
 
     @Autowired
-    protected UserService userService;
+    protected AccountService accountService;
 
     public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
-        logger.info("Fetching user configuration information ... ");
+        logger.info("Fetching account configuration information ... ");
         Long userId = SessionContext.getCurrentUserId(session);
-        if (userId == null) {
+        Account user = null;
+        if (userId == null || (user = accountService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
-        User user = userService.findOne(userId);
         TransportConfig transportConfig =
                 transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
         if (transportConfig == null) {
             transportConfig = transportConfigService.create(PROTOCOL, DOMAIN);
-            user.addConfig(transportConfig);
-            userService.save(user);
-            Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request, PROTOCOL, DOMAIN);
+            transportConfig.setUserId(userId);
+            Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request,PROTOCOL,DOMAIN);
             Map<String, String> taInitiatorConfig = taInitiatorConfig(user, request);
             transportConfig.setSutInitiator(sutInitiatorConfig);
             transportConfig.setTaInitiator(taInitiatorConfig);
@@ -105,7 +101,8 @@ public abstract class TransportController {
         return transportConfig;
     }
 
-    private Map<String, String> taInitiatorConfig(User user, HttpServletRequest request)
+
+    private Map<String, String> taInitiatorConfig(Account account, HttpServletRequest request)
             throws UserNotFoundException {
         logger.info("Creating user ta initiator config information ... ");
         Map<String, String> config = new HashMap<String, String>();
@@ -114,13 +111,15 @@ public abstract class TransportController {
         return config;
     }
 
-    private Map<String, String> sutInitiatorConfig(User user, HttpServletRequest request, String PROTOCOL, String DOMAIN)
+    private Map<String, String> sutInitiatorConfig(Account user, HttpServletRequest request, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
         logger.info("Creating user sut initiator config information ... ");
         Map<String, String> config = new HashMap<String, String>();
         int token = new Random().nextInt(999);
-        config.put("username", "vendor_" + user.getId() + "_" + token);
-        config.put("password", "vendor_" + user.getId() + "_" + token);
+        config.put("username",
+                user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getUsername());
+        config.put("password",
+                user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getPassword());
         config.put("endpoint", Utils.getUrl(request) + "/api/ws/" + DOMAIN + "/" + PROTOCOL + "/message");
         return config;
     }
@@ -128,36 +127,36 @@ public abstract class TransportController {
     public boolean startListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
         logger.info("Starting listener");
-        Long userId = SessionContext.getCurrentUserId(session);
-        if (userId == null || (userService.findOne(userId)) == null) {
+        Long accountId = SessionContext.getCurrentUserId(session);
+        if (accountId == null || (accountService.findOne(accountId)) == null) {
             throw new UserNotFoundException();
         }
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
-        removeUserTransaction(userId, PROTOCOL, DOMAIN);
+        removeAccountTransaction(accountId, PROTOCOL, DOMAIN);
 
         Map<String, String> config = new HashMap<String, String>();
-        config.putAll(getSutInitiatorConfig(userId, PROTOCOL, DOMAIN));
+        config.putAll(getSutInitiatorConfig(accountId, PROTOCOL, DOMAIN));
         TransportMessage transportMessage = new TransportMessage();
         transportMessage.setMessageId(request.getResponseMessageId());
         transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
         TestStep testStep = testStepService.findOne(request.getTestStepId());
         if (testStep != null) {
-            testCaseExecutionUtils.initTestCaseExecution(userId, testStep);
+            testCaseExecutionUtils.initTestCaseExecution(accountId, testStep);
         }
-        userConfigService.save(new UserConfig(config, userId));
+        userConfigService.save(new UserConfig(config, accountId));
         return true;
     }
 
     public boolean stopListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
         logger.info("Stopping listener ");
-        Long userId = SessionContext.getCurrentUserId(session);
-        if (userId == null || (userService.findOne(userId)) == null) {
+        Long accountId = SessionContext.getCurrentUserId(session);
+        if (accountId == null || (accountService.findOne(accountId)) == null) {
             throw new UserNotFoundException();
         }
-        removeUserTransaction(userId,PROTOCOL,DOMAIN);
+        removeAccountTransaction(accountId,PROTOCOL,DOMAIN);
         return true;
     }
 
@@ -170,12 +169,12 @@ public abstract class TransportController {
 
     public TransportResponse populateMessage(TransportRequest request, HttpSession session) {
         Long testStepId = request.getTestStepId();
-        Long userId = SessionContext.getCurrentUserId(session);
+        Long accountId = SessionContext.getCurrentUserId(session);
         TransportResponse transportResponse = new TransportResponse();
         String messageContent = request.getMessage();
         TestStep testStep = testStepService.findOne(testStepId);
         if (testStep != null) {
-            TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(userId, testStep);
+            TestCaseExecution testCaseExecution = testCaseExecutionUtils.initTestCaseExecution(accountId, testStep);
             if (testCaseExecution != null) {
                 Message message = new Message();
                 message.setContent(messageContent);
@@ -188,7 +187,7 @@ public abstract class TransportController {
 
     public String send(TransportRequest request,String message) throws TransportClientException {
         try {
-            String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            String incoming = webServiceClient.send(message, request.getConfig().get("accountname"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             logger.info("Response received : "+incoming);
             return incoming;
         } catch (Exception e1) {
@@ -197,7 +196,7 @@ public abstract class TransportController {
         }
     }
 
-    public void parseIncomingMessage(String incomingMessage,TestStep testStep,Long userId){
+    public void parseIncomingMessage(String incomingMessage,TestStep testStep,Long accountId){
         String tmp = incomingMessage;
         try {
             incomingMessage = XmlUtil.prettyPrint(incomingMessage);
@@ -209,16 +208,16 @@ public abstract class TransportController {
         if (nextTestStep != null) {
             Message message2 = new Message();
             message2.setContent(incomingMessage);
-            mappingUtils.readDatasFromMessage(message2, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(userId, nextTestStep));
+            mappingUtils.readDatasFromMessage(message2, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(accountId, nextTestStep));
         }
     }
 
-    protected Transaction saveTransaction(Long userId,TestStep testStep,String incoming,String outgoing){
-        Transaction transaction = transactionService.findOneByUserAndTestStep(userId, testStep.getId());
+    protected Transaction saveTransaction(Long accountId,TestStep testStep,String incoming,String outgoing){
+        Transaction transaction = transactionService.findOneByUserAndTestStep(accountId, testStep.getId());
         if (transaction == null) {
             transaction = new Transaction();
             //transaction.setTestStep(testStepService.findOne(testStepId));
-            transaction.setUser(userRepository.findOne(userId));
+            transaction.setUserId(accountId);
             //transaction.setOutgoing(outgoingMessage.getContent());
             transaction.setOutgoing(outgoing);
             transaction.setIncoming(incoming);
@@ -229,8 +228,8 @@ public abstract class TransportController {
 
 
     @Transactional
-    private boolean removeUserTransaction(Long userId, String PROTOCOL, String DOMAIN) {
-        Map<String, String> config = getSutInitiatorConfig(userId, PROTOCOL, DOMAIN);
+    private boolean removeAccountTransaction(Long accountId, String PROTOCOL, String DOMAIN) {
+        Map<String, String> config = getSutInitiatorConfig(accountId, PROTOCOL, DOMAIN);
         List<TransportMessage> transportMessages = transportMessageService.findAllByProperties(config);
         if (transportMessages != null) {
             transportMessageService.delete(transportMessages);
@@ -242,8 +241,8 @@ public abstract class TransportController {
         return true;
     }
 
-    private Map<String, String> getSutInitiatorConfig(Long userId, String PROTOCOL, String DOMAIN) {
-        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
+    private Map<String, String> getSutInitiatorConfig(Long accountId, String PROTOCOL, String DOMAIN) {
+        TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(accountId, PROTOCOL, DOMAIN);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
@@ -251,8 +250,8 @@ public abstract class TransportController {
         return sutInitiator;
     }
 
-    private boolean userExist(Long userId) {
-        User user = userService.findOne(userId);
-        return user != null;
+    private boolean accountExist(Long accountId) {
+        Account account = accountService.findOne(accountId);
+        return account != null;
     }
 }
