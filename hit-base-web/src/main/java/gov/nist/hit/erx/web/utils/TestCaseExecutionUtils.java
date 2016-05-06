@@ -34,7 +34,6 @@ public class TestCaseExecutionUtils {
 
     static final Logger logger = LoggerFactory.getLogger(TestCaseExecutionUtils.class);
 
-    @Transactional
     public TestCaseExecution initTestCaseExecution(Long userId,TestStep testStep){
         TestCaseExecution testCaseExecution = this.findOne(userId);
         if(testCaseExecution==null) {
@@ -49,7 +48,6 @@ public class TestCaseExecutionUtils {
         return testCaseExecution;
     }
 
-    @Transactional
     public  TestCaseExecution findOne(Long userId) {
         return testCaseExecutionService.findOneByUserId(userId);
     }

@@ -18,15 +18,13 @@ import javax.servlet.http.HttpServletResponse;
  */
 @RestController
 @Controller
-@RequestMapping("/ws/erx/rest")
+@RequestMapping("/wss/erx/rest")
 public class RestWebServiceController extends WebServiceController {
 
     static final Logger logger = LoggerFactory.getLogger(RestWebServiceController.class);
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "rest";
 
-
-    @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST,produces = "text/xml")
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException, UserNotFoundException {
         logger.info("Message received : " + body);

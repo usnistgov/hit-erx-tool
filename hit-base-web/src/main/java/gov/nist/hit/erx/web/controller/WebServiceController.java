@@ -95,11 +95,11 @@ public abstract class WebServiceController {
         return null;
     }
 
-    @Transactional()
     public String message(String message,String authorization) throws TransportClientException, MessageParserException, UserNotFoundException {
         //todo put basic auth in response ? (get in ta info)
         Map<String, String> criteria = getCriteriaFromBasicAuth(authorization);
         if(criteria!=null){
+            criteria.remove("password");
             Long userId = userConfigService.findUserIdByProperties(criteria);
             Long messageId = transportMessageService.findMessageIdByProperties(criteria);
             if(messageId==null){
@@ -157,7 +157,9 @@ public abstract class WebServiceController {
     }
 
     public HttpServletResponse setBasicAuth(String authorization,HttpServletResponse response, String PROTOCOL, String DOMAIN) {
-        Map<String, String> credentials = getSutInitiatorConfig(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization)), PROTOCOL,DOMAIN);
+        Map<String,String> criterias = getCriteriaFromBasicAuth(authorization);
+        criterias.remove("password");
+        Map<String, String> credentials = getSutInitiatorConfig(userConfigService.findUserIdByProperties(criterias), PROTOCOL,DOMAIN);
         String plainCreds = credentials.get("username") + ":" + credentials.get("password");
         byte[] plainCredsBytes = plainCreds.getBytes();
         String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);

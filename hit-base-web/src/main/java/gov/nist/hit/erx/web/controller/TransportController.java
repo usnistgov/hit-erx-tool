@@ -81,7 +81,7 @@ public abstract class TransportController {
 
     public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
-        logger.info("Fetching account configuration information ... ");
+        logger.info("Fetching user configuration information ... ");
         Long userId = SessionContext.getCurrentUserId(session);
         Account user = null;
         if (userId == null || (user = accountService.findOne(userId)) == null) {
@@ -120,33 +120,59 @@ public abstract class TransportController {
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getUsername());
         config.put("password",
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getPassword());
-        config.put("endpoint", Utils.getUrl(request) + "/api/ws/" + DOMAIN + "/" + PROTOCOL + "/message");
+        config.put("endpoint", Utils.getUrl(request) + "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message");
         return config;
     }
 
     public boolean startListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
         logger.info("Starting listener");
-        Long accountId = SessionContext.getCurrentUserId(session);
-        if (accountId == null || (accountService.findOne(accountId)) == null) {
+        Long userId = SessionContext.getCurrentUserId(session);
+        if (userId == null || (accountService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
+        clearExchanges(userId,PROTOCOL,DOMAIN);
+
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
-        removeAccountTransaction(accountId, PROTOCOL, DOMAIN);
 
-        Map<String, String> config = new HashMap<String, String>();
-        config.putAll(getSutInitiatorConfig(accountId, PROTOCOL, DOMAIN));
         TransportMessage transportMessage = new TransportMessage();
         transportMessage.setMessageId(request.getResponseMessageId());
+        Map<String, String> config = new HashMap<String, String>();
+        config.putAll(getSutInitiatorConfig(userId,PROTOCOL,DOMAIN));
         transportMessage.setProperties(config);
         transportMessageService.save(transportMessage);
         TestStep testStep = testStepService.findOne(request.getTestStepId());
         if (testStep != null) {
-            testCaseExecutionUtils.initTestCaseExecution(accountId, testStep);
+            testCaseExecutionUtils.initTestCaseExecution(userId, testStep);
         }
-        userConfigService.save(new UserConfig(config, accountId));
+        userConfigService.save(new UserConfig(config, userId));
         return true;
+    }
+
+    private boolean clearExchanges(Long userId, String PROTOCOL, String DOMAIN) {
+        Map<String, String> config = getSutInitiatorConfig(userId,PROTOCOL,DOMAIN);
+        Map<String, String> criteria = new HashMap<String, String>();
+        criteria.put("username", config.get("username"));
+        criteria.put("password", config.get("password"));
+        clearMessages(criteria);
+        clearTransactions(criteria);
+        return true;
+    }
+
+    private void clearMessages(Map<String, String> criteria) {
+        List<TransportMessage> transportMessages =
+                transportMessageService.findAllByProperties(criteria);
+        if (transportMessages != null && !transportMessages.isEmpty()) {
+            transportMessageService.delete(transportMessages);
+        }
+    }
+
+    private void clearTransactions(Map<String, String> criteria) {
+        List<Transaction> transactions = transactionService.findAllByProperties(criteria);
+        if (transactions != null && !transactions.isEmpty()) {
+            transactionService.delete(transactions);
+        }
     }
 
     public boolean stopListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
@@ -156,13 +182,14 @@ public abstract class TransportController {
         if (accountId == null || (accountService.findOne(accountId)) == null) {
             throw new UserNotFoundException();
         }
-        removeAccountTransaction(accountId,PROTOCOL,DOMAIN);
+        clearExchanges(accountId,PROTOCOL,DOMAIN);
         return true;
     }
 
     public Transaction searchTransaction(Map<String, String> criteria) {
         //We don't search criteria here as it's relative to a protocol
         logger.info("Searching transaction...");
+        criteria.remove("password");
         Transaction transaction = transactionService.findOneByProperties(criteria);
         return transaction;
     }
@@ -187,7 +214,7 @@ public abstract class TransportController {
 
     public String send(TransportRequest request,String message) throws TransportClientException {
         try {
-            String incoming = webServiceClient.send(message, request.getConfig().get("accountname"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             logger.info("Response received : "+incoming);
             return incoming;
         } catch (Exception e1) {
@@ -224,21 +251,6 @@ public abstract class TransportController {
             transactionService.save(transaction);
         }
         return transaction;
-    }
-
-
-    @Transactional
-    private boolean removeAccountTransaction(Long accountId, String PROTOCOL, String DOMAIN) {
-        Map<String, String> config = getSutInitiatorConfig(accountId, PROTOCOL, DOMAIN);
-        List<TransportMessage> transportMessages = transportMessageService.findAllByProperties(config);
-        if (transportMessages != null) {
-            transportMessageService.delete(transportMessages);
-        }
-        List<Transaction> transactions = transactionService.findAllByProperties(config);
-        if (transactions != null) {
-            transactionService.delete(transactions);
-        }
-        return true;
     }
 
     private Map<String, String> getSutInitiatorConfig(Long accountId, String PROTOCOL, String DOMAIN) {

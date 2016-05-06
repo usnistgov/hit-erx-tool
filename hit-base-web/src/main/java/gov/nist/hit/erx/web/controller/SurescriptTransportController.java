@@ -42,22 +42,18 @@ public class SurescriptTransportController extends TransportController {
     private final static String DOMAIN = "erx";
     private final static String PROTOCOL = "surescript";
 
-
-    @Transactional
     @RequestMapping(value = "/configs", method = RequestMethod.POST)
     public TransportConfig configs(HttpSession session, HttpServletRequest request)
             throws UserNotFoundException {
         return configs(session, request, PROTOCOL, DOMAIN);
     }
 
-    @Transactional
     @RequestMapping(value = "/startListener", method = RequestMethod.POST)
     public boolean startListener(@RequestBody TransportRequest request, HttpSession session)
             throws UserNotFoundException {
         return startListener(request, session, PROTOCOL, DOMAIN);
     }
 
-    @Transactional
     @RequestMapping(value = "/stopListener", method = RequestMethod.POST)
     public boolean stopListener(@RequestBody TransportRequest request, HttpSession session)
             throws UserNotFoundException {
@@ -73,13 +69,11 @@ public class SurescriptTransportController extends TransportController {
         return searchTransaction(criteria);
     }
 
-    @Transactional()
     @RequestMapping(value = "/populateMessage", method = RequestMethod.POST)
     public TransportResponse populateMessage(@RequestBody TransportRequest request, HttpSession session) {
         return super.populateMessage(request, session);
     }
 
-    @Transactional()
     @RequestMapping(value = "/send", method = RequestMethod.POST)
     public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
         logger.info("Sending message  with user id=" + request.getUserId() + " and test step with id="

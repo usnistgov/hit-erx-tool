@@ -1,5 +1,6 @@
 package gov.nist.hit.erx.web.controller;
 
+import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.TestContext;
 import gov.nist.hit.core.service.exception.MessageParserException;
 import gov.nist.hit.core.service.exception.UserNotFoundException;
@@ -17,6 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * This software was developed at the National Institute of Standards and Technology by employees of
@@ -33,7 +35,7 @@ import java.io.IOException;
  */
 @RestController
 @Controller
-@RequestMapping("/ws/erx/surescript")
+@RequestMapping("/wss/erx/surescript")
 public class SurescriptWebServiceController extends WebServiceController {
 
     private final static String DOMAIN = "erx";
@@ -42,13 +44,18 @@ public class SurescriptWebServiceController extends WebServiceController {
     @Autowired
     protected TestCaseExecutionUtils testCaseExecutionUtils;
 
-    @Transactional()
     @RequestMapping(value = "/message", method = RequestMethod.POST, produces = "text/xml")
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException {
         try {
             String message = SurescriptUtils.parseEnveloppe(body);
             String outgoing = super.message(message, authorization);
-            TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization))).getCurrentTestStepId()).getTestContext();
+            Map<String,String> criterias = getCriteriaFromBasicAuth(authorization);
+            criterias.remove("password");
+            Long userId = userConfigService.findUserIdByProperties(criterias);
+            if(userId == null){
+                throw new UserNotFoundException();
+            }
+            TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userId).getCurrentTestStepId()).getTestContext();
             response = super.setBasicAuth(authorization, response,PROTOCOL,DOMAIN);
             return SurescriptUtils.addEnveloppe(outgoing, testContext);
         } catch (UserNotFoundException e) {
