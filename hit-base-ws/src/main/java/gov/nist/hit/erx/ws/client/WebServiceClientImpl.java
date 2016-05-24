@@ -1,26 +1,28 @@
 package gov.nist.hit.erx.ws.client;
 
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
-import org.apache.http.*;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.HttpComponentsAsyncClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import javax.security.cert.X509Certificate;
 import javax.xml.bind.DatatypeConverter;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
 /**
  * Created by mcl1 on 12/17/15.
@@ -53,11 +55,55 @@ public class WebServiceClientImpl implements WebServiceClient {
         headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
         headers.add(org.apache.http.HttpHeaders.ACCEPT, MediaType.TEXT_XML_VALUE);
         HttpEntity<String> request = new HttpEntity<>(message, headers);
-        RestTemplate restTemplate = new RestTemplate();
+
 
         logger.info("Send to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds + " message : " + message);
-        ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.POST, request, String.class);
-        String messageReceived = MessageUtils.prettyPrint(response.getBody());
-        return messageReceived;
+        ResponseEntity<String> response = null;
+        try {
+            response = exchange(endpoint, HttpMethod.POST, request);
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        }
+        try {
+            String messageReceived = MessageUtils.prettyPrint(response.getBody());
+            return messageReceived;
+        } catch (Exception e) {
+            return response.getBody();
+        }
+    }
+
+    public ResponseEntity<String> exchange(String endpoint, HttpMethod method, HttpEntity<String> request) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+
+        TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
+            @Override
+            public boolean isTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws CertificateException {
+                return true;
+            }
+        };
+
+        SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
+                .loadTrustMaterial(null, acceptingTrustStrategy)
+                .build();
+
+        SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLSocketFactory(csf)
+                .build();
+
+        HttpComponentsClientHttpRequestFactory requestFactory =
+                new HttpComponentsClientHttpRequestFactory();
+
+        requestFactory.setHttpClient(httpClient);
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+
+        //HttpComponentsClientHttpRequestFactory httpComponentsClientHttpRequestFactory = new HttpComponentsAsyncClientHttpRequestFactory();
+        //RestTemplate restTemplate = new RestTemplate(httpComponentsClientHttpRequestFactory);
+        return restTemplate.exchange(endpoint, method, request, String.class);
     }
 }

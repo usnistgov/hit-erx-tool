@@ -50,12 +50,14 @@ public class SurescriptWebServiceController extends WebServiceController {
             String message = SurescriptUtils.parseEnveloppe(body);
             String outgoing = super.message(message, authorization);
             Map<String,String> criterias = getCriteriaFromBasicAuth(authorization);
-            criterias.remove("password");
+            /*criterias.remove("password");
             Long userId = userConfigService.findUserIdByProperties(criterias);
             if(userId == null){
                 throw new UserNotFoundException();
             }
             TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userId).getCurrentTestStepId()).getTestContext();
+            */
+            TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization))).getCurrentTestStepId()).getTestContext();
             response = super.setBasicAuth(authorization, response,PROTOCOL,DOMAIN);
             return SurescriptUtils.addEnveloppe(outgoing, testContext);
         } catch (UserNotFoundException e) {

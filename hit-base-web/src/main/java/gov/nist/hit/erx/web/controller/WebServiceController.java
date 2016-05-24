@@ -99,7 +99,7 @@ public abstract class WebServiceController {
         //todo put basic auth in response ? (get in ta info)
         Map<String, String> criteria = getCriteriaFromBasicAuth(authorization);
         if(criteria!=null){
-            criteria.remove("password");
+            //criteria.remove("password");
             Long userId = userConfigService.findUserIdByProperties(criteria);
             Long messageId = transportMessageService.findMessageIdByProperties(criteria);
             if(messageId==null){
@@ -158,7 +158,7 @@ public abstract class WebServiceController {
 
     public HttpServletResponse setBasicAuth(String authorization,HttpServletResponse response, String PROTOCOL, String DOMAIN) {
         Map<String,String> criterias = getCriteriaFromBasicAuth(authorization);
-        criterias.remove("password");
+        //criterias.remove("password");
         Map<String, String> credentials = getSutInitiatorConfig(userConfigService.findUserIdByProperties(criterias), PROTOCOL,DOMAIN);
         String plainCreds = credentials.get("username") + ":" + credentials.get("password");
         byte[] plainCredsBytes = plainCreds.getBytes();

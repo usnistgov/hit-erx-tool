@@ -79,6 +79,9 @@ public abstract class TransportController {
     @Autowired
     protected AccountService accountService;
 
+    @Autowired
+    protected PasswordService passwordService;
+
     public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
         logger.info("Fetching user configuration information ... ");
@@ -119,7 +122,7 @@ public abstract class TransportController {
         config.put("username",
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getUsername());
         config.put("password",
-                user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getPassword());
+                user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : passwordService.getEncryptedPassword(user.getUsername()));
         config.put("endpoint", Utils.getUrl(request) + "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message");
         return config;
     }
@@ -189,7 +192,7 @@ public abstract class TransportController {
     public Transaction searchTransaction(Map<String, String> criteria) {
         //We don't search criteria here as it's relative to a protocol
         logger.info("Searching transaction...");
-        criteria.remove("password");
+        //criteria.remove("password");
         Transaction transaction = transactionService.findOneByProperties(criteria);
         return transaction;
     }
