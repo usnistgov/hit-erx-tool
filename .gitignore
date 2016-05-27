@@ -9,3 +9,6 @@ hit-base-web/target
 .idea
 *.iml
 hit-base-ws/target
+hit-base-web/client/app/bower_components
+hit-base-web/client/.tmp
+hit-base-web/client/.sass-cache
