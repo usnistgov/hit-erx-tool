@@ -30,6 +30,18 @@ public class WebServiceClientImplTest {
 
     protected WebServiceClientImpl webServiceClient = new WebServiceClientImpl();
 
+    private static final String MESSAGE_EDI = "UNA:+./*'" +
+            "UIB+UNOA:0++77777777:C+++SENDER_ID:D+RECIPIENT_ID:P+20151120:141523'" +
+            "UIH+SCRIPT:010:006:NEWRX+25106+ORDMU201'" +
+            "PVD+PC+FF1234567:DH*1619967999:HPI+++MacClare:Susan:::++Clinic One+10105 Trailblazer Ct:Portland:OR:97215+5035552233:TE'" +
+            "PVD+P2+1629900:D3*3030000003:HPI+++++Mail Order Pharmacy 10.6MU NOCS+1629-90 Supply Ln:Saint Louis:MO:63105+3145553142:TE'" +
+            "PTT+1+19570321+Biscayne:Sophia:::+F+6532865:94+991 Monroe Avenue:Port Charlotte:FL:33952+9415551223:TE'" +
+            "DRU+P:Procardia XL 30 MG 24 HR Extended R:00069265041:ND::30::207772:SBD:elease Oral Tablet:::AA:C42927:AB:C28253+:53:38:AC:C48542+:Take 1 tablet a day by mouth for seven days, then take 2 tablets by mo:uth once a day.+85:20151120:102*ZDS:30:804+1+R:0+1:I201:ABF'" +
+            "SIG+1:THEN+20130731:14.01d+2:Take 1 tablet a day by mouth for seven days, then take 2 tablets by mouth once a day.+1:take:1:419652001::::1:tablet:2:C42998:+++by mouth:1:26643006:++:::::::::::1:day:1:258703001::::::+7:day:1:258703001+:::+::::::::::'" +
+            "SIG+2:+20130731:14.01d+2:Take 1 tablet a day by mouth for seven days, then take 2 tablets by mouth once a day.+1:take:1:419652001::::2:tablet:2:C42998:+++by mouth:1:26643006:++:::::::::::1:day:1:258703001::::::+:::+:::+::::::::::'" +
+            "UIT+25106+9'" +
+            "UIZ++1'";
+
     private HttpHeaders buildHeaders(String username, String password){
         String plainCreds = username + ":" + password;
         byte[] plainCredsBytes = plainCreds.getBytes();
@@ -77,10 +89,10 @@ public class WebServiceClientImplTest {
 
 
     @Test
-    public void testGet() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-        String message = "";
-        String url = "https://edge.nist.gov:12080/ett/api/login";
-        ResponseEntity<String> res = webServiceClient.exchange(url,HttpMethod.GET,buildRequest(message,new HttpHeaders()));
+    public void testHitDev() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        String message = MESSAGE_EDI;
+        String url = "https://dev-erx-testing.nist.gov:14081/hit-base-tool/api/wss/erx/rest/message";
+        ResponseEntity<String> res = webServiceClient.exchange(url,HttpMethod.POST,buildRequest(message,new HttpHeaders()));
         Assert.assertEquals(res.getStatusCode(),HttpStatus.OK);
     }
 
