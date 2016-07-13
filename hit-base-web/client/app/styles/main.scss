@@ -2280,3 +2280,148 @@ h4.addPOAFormDateSectionTitle {
   background-color: #f8f8f8;
 }
 
+.col-fixed-350 {
+  float: left;
+  width: 350px;
+  min-width: 350px;
+  max-width: 350px;
+}
+
+.concise-view {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+  text-align:left;
+}
+
+.cs-concise-view {
+  max-width: 100%;
+}
+
+.expanded-view {
+  text-align:left;
+}
+
+.name-concise-view {
+  max-width: 100%;
+}
+
+
+table.validation-result-table {
+  max-height: 325px !important;
+  height: 320px !important;
+}
+
+
+
+
+table.profile-table{
+  max-height: 900px !important;
+  height: 800px !important;
+}
+
+div.fixed-table-container div.th-inner {
+  /* the height of the header row */
+}
+
+//div.fixed-table-container-inner table thead tr.table-header, div.fixed-table-container-inner table thead tr.table-header * {
+//  background-color: #d9edf7;
+//  color: #3a87ad;
+//}
+
+div.fixed-table-container-inner {
+  border-top: 1px solid #ddd;
+}
+
+
+div.fixed-table-container div.fixed-table-container {
+  /* the height of the header row - this needs to match line-height above */
+  padding-top: 30px;
+}
+
+div.fixed-table-container tr.hidden-header .th-inner {
+  padding-right: 5px;
+}
+
+div.validation-result-table-container div.fixed-table-container-inner {
+  /* the maximum height of the table: */
+  max-height: 320px;
+  width: 100%;
+
+}
+
+div.confstatement-table-container div.fixed-table-container-inner {
+  /* the maximum height of the table: */
+  max-height: 800px !important;
+  width: 100%;
+}
+
+
+div.vocab-tab-table-container div.fixed-table-container-inner {
+  /* the maximum height of the table: */
+  max-height: 500px !important;
+  width: 100%;
+}
+
+
+div.vocab-result-table-container div.fixed-table-container-inner{
+  max-height: 600px !important;
+  width: 100%;
+}
+
+div.profile-table-container div.fixed-table-container-inner{
+  max-height: 800px !important;
+  width: 100%;
+}
+
+div.fixed-table-container-inner > tr.hidden-header{
+  display: none;
+}
+
+div.doc-testcase-tree-container div.fixed-table-container-inner{
+  max-height: 500px !important;
+  width: 100%;
+}
+
+.st-sort-descent:before {
+  content: none;
+}
+
+.st-sort-ascent:before {
+  content: none;
+}
+
+
+div.vocab-result-table-container,div.doc-testcase-tree-container,div.vocab-tab-table-container,div.validation-result-table-container {
+  margin-top:20px;
+}
+
+.profile-table-container2 {
+  max-width: 99%;
+  overflow: auto;
+}
+
+.tbl-header{
+  max-height: 20px;
+  height: 20px;
+}
+
+.table-header{
+  color: #3a87ad;
+  //  border:1px solid #ddd;
+}
+
+table.table-line-break {
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+
+div.table-container{
+  width: 100%;
+  padding-top:10px;
+}
+
+.table-bordered tbody tr td{
+  border: 1px solid #ddd;
+}
