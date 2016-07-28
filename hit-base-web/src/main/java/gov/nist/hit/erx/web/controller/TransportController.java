@@ -217,6 +217,7 @@ public abstract class TransportController {
 
     public String send(TransportRequest request,String message) throws TransportClientException {
         try {
+            logger.info("Message formatted to be sent : "+message);
             String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
             logger.info("Response received : "+incoming);
             return incoming;

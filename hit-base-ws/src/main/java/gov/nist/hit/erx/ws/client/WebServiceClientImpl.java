@@ -55,12 +55,11 @@ public class WebServiceClientImpl implements WebServiceClient {
         headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
         headers.add(org.apache.http.HttpHeaders.ACCEPT, MediaType.TEXT_XML_VALUE);
         HttpEntity<String> request = new HttpEntity<>(message, headers);
-
-
-        logger.info("Send to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds + " message : " + message);
         ResponseEntity<String> response = null;
+        logger.info("Sending a message to "+endpoint+" ...");
         try {
             response = exchange(endpoint, HttpMethod.POST, request);
+            logger.info("Message : "+message+" sent to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds);
         } catch (KeyStoreException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
