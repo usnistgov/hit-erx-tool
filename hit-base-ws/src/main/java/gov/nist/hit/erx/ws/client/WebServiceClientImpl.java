@@ -1,5 +1,6 @@
 package gov.nist.hit.erx.ws.client;
 
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -43,36 +44,45 @@ public class WebServiceClientImpl implements WebServiceClient {
 
     @Override
     public String send(String message, String... arguments) {
-        final String username = arguments[0];
-        final String password = arguments[1];
-        final String endpoint = arguments[2];
-
-        String plainCreds = username + ":" + password;
-        byte[] plainCredsBytes = plainCreds.getBytes();
-        String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Basic " + base64Creds);
-        headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
-        headers.add(org.apache.http.HttpHeaders.ACCEPT, MediaType.TEXT_XML_VALUE);
-        HttpEntity<String> request = new HttpEntity<>(message, headers);
-        ResponseEntity<String> response = null;
-        logger.info("Sending a message to "+endpoint+" ...");
-        try {
-            response = exchange(endpoint, HttpMethod.POST, request);
-            logger.info("Message : "+message+" sent to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds);
-        } catch (KeyStoreException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyManagementException e) {
-            e.printStackTrace();
+        if(arguments.length>=3) {
+            final String username = arguments[0];
+            final String password = arguments[1];
+            final String endpoint = arguments[2];
+            String plainCreds = username + ":" + password;
+            byte[] plainCredsBytes = plainCreds.getBytes();
+            String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Authorization", "Basic " + base64Creds);
+            if(arguments.length==4 && MediaType.parseMediaType(arguments[3])!=null){
+                headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, arguments[3]);
+                headers.add(org.apache.http.HttpHeaders.ACCEPT, arguments[3]);
+            } else {
+                headers.add(org.apache.http.HttpHeaders.CONTENT_TYPE, MediaType.TEXT_XML_VALUE);
+                headers.add(org.apache.http.HttpHeaders.ACCEPT, MediaType.TEXT_XML_VALUE);
+            }
+            HttpEntity<String> request = new HttpEntity<>(message, headers);
+            ResponseEntity<String> response = null;
+            logger.info("Sending a message to " + endpoint + " ...");
+            try {
+                response = exchange(endpoint, HttpMethod.POST, request);
+                logger.info("Message : " + message + " sent to the endpoint : " + endpoint + " with basic auth credentials : " + base64Creds);
+            } catch (KeyStoreException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (KeyManagementException e) {
+                e.printStackTrace();
+            }
+            try {
+                String messageReceived = MessageUtils.prettyPrint(response.getBody());
+                return messageReceived;
+            } catch (Exception e) {
+                return response.getBody();
+            }
+        } else {
+            logger.error("Arguments count invalid ("+arguments.length+" found, 3 required). arguments="+arguments.toString());
         }
-        try {
-            String messageReceived = MessageUtils.prettyPrint(response.getBody());
-            return messageReceived;
-        } catch (Exception e) {
-            return response.getBody();
-        }
+        return null;
     }
 
     public ResponseEntity<String> exchange(String endpoint, HttpMethod method, HttpEntity<String> request) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {

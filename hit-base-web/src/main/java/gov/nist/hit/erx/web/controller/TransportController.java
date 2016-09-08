@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,7 +219,11 @@ public abstract class TransportController {
     public String send(TransportRequest request,String message) throws TransportClientException {
         try {
             logger.info("Message formatted to be sent : "+message);
-            String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"));
+            String contentType = MediaType.TEXT_XML_VALUE;
+            if(request.getConfig().get("Content-Type")!=null){
+                contentType = request.getConfig().get("Content-Type");
+            }
+            String incoming = webServiceClient.send(message, request.getConfig().get("username"), request.getConfig().get("password"), request.getConfig().get("endpoint"),contentType);
             logger.info("Response received : "+incoming);
             return incoming;
         } catch (Exception e1) {

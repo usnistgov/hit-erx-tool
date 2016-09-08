@@ -1,5 +1,8 @@
 package gov.nist.hit.erx.ws.client.utils;
 
+import org.apache.commons.io.Charsets;
+import org.springframework.web.util.UriUtils;
+
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -8,6 +11,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 /**
  * This software was developed at the National Institute of Standards and Technology by employees of
@@ -52,5 +57,13 @@ public class MessageUtils {
 
     public static String cleanToSend(String message) {
         return message.replace("\n","");
+    }
+
+    public static String encodeMedHistory(String message) throws UnsupportedEncodingException {
+        return UriUtils.encodeQueryParam(message.replace("\n", ""), Charsets.UTF_8.displayName());
+    }
+
+    public static String decodeMedHistory(String incomingMessage) throws UnsupportedEncodingException {
+        return UriUtils.decode(incomingMessage,Charsets.UTF_8.displayName());
     }
 }
