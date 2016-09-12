@@ -48,17 +48,10 @@ public class SurescriptWebServiceController extends WebServiceController {
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException {
         try {
             String message = SurescriptUtils.parseEnveloppe(body);
-            String outgoing = super.message(message, authorization);
-            Map<String,String> criterias = getCriteriaFromBasicAuth(authorization);
-            /*criterias.remove("password");
-            Long userId = userConfigService.findUserIdByProperties(criterias);
-            if(userId == null){
-                throw new UserNotFoundException();
-            }
-            TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userId).getCurrentTestStepId()).getTestContext();
-            */
+            Map<String,String> criteria = getCriteriaFromBasicAuth(authorization);
+            String outgoing = super.message(message, criteria);
             TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization))).getCurrentTestStepId()).getTestContext();
-            response = super.setBasicAuth(authorization, response,PROTOCOL,DOMAIN);
+            response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
             return SurescriptUtils.addEnveloppe(outgoing, testContext);
         } catch (UserNotFoundException e) {
             e.printStackTrace();

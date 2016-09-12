@@ -80,16 +80,14 @@ public class UrlEncodedTransportController extends TransportController {
         String outgoingMessage = null;
         try {
             outgoingMessage = MessageUtils.encodeMedHistory(request.getMessage());
-            String endpoint = request.getConfig().get("endpoint");
-            request.getConfig().remove("endpoint");
             StringBuilder body = new StringBuilder();
             body.append("request=");
             body.append(outgoingMessage);
             request.getConfig().put("Content-Type", MediaType.APPLICATION_FORM_URLENCODED_VALUE);
             String incoming = send(request,body.toString());
             Long userId = SessionContext.getCurrentUserId(session);
-            decodeIncomingMessage(incoming,testStep,userId);
-            return saveTransaction(userId,testStep,incoming,outgoingMessage);
+            String decodedMessage = decodeIncomingMessage(incoming,testStep,userId);
+            return saveTransaction(userId,testStep,decodedMessage,outgoingMessage);
         } catch (UnsupportedEncodingException e) {
             logger.error("Unable to encode outgoing message: "+request.getMessage());
             e.printStackTrace();
@@ -110,9 +108,12 @@ public class UrlEncodedTransportController extends TransportController {
 //        }
 //    }
 
-    public void decodeIncomingMessage(String incomingMessage,TestStep testStep,Long accountId){
+    public String decodeIncomingMessage(String incomingMessage,TestStep testStep,Long accountId){
         String decodedMessage = null;
         try {
+            if(incomingMessage.startsWith("request=")){
+                incomingMessage = incomingMessage.substring("request=".length());
+            }
             decodedMessage = MessageUtils.decodeMedHistory(incomingMessage);
             //Read data in the received message
             TestStep nextTestStep = testStepUtils.findNext(testStep);
@@ -121,8 +122,11 @@ public class UrlEncodedTransportController extends TransportController {
                 message.setContent(decodedMessage);
                 mappingUtils.readDatasFromMessage(message, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(accountId, nextTestStep));
             }
+            return decodedMessage;
         } catch (UnsupportedEncodingException e) {
+            logger.error("Unable to decode the incoming message (UnsupportedEncodingException): "+incomingMessage);
             e.printStackTrace();
         }
+        return incomingMessage;
     }
 }

@@ -1,6 +1,5 @@
 package gov.nist.hit.erx.ws.client;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -10,15 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
-import org.springframework.http.client.HttpComponentsAsyncClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import javax.security.cert.X509Certificate;
 import javax.xml.bind.DatatypeConverter;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;

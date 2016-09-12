@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 /**
  * Created by mcl1 on 1/13/16.
@@ -28,8 +29,9 @@ public class RestWebServiceController extends WebServiceController {
     @RequestMapping(value = "/message", method = RequestMethod.POST,produces = "text/xml")
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException, UserNotFoundException {
         logger.info("Message received : " + body);
-        response = super.setBasicAuth(authorization, response,PROTOCOL,DOMAIN);
-        return super.message(body, authorization);
+        Map<String,String> criteria = getCriteriaFromBasicAuth(authorization);
+        response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
+        return super.message(body, criteria);
     }
 
 }
