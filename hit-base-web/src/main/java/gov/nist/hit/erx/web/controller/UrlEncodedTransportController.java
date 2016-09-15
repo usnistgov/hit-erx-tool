@@ -87,7 +87,7 @@ public class UrlEncodedTransportController extends TransportController {
             String incoming = send(request,body.toString());
             Long userId = SessionContext.getCurrentUserId(session);
             String decodedMessage = decodeIncomingMessage(incoming,testStep,userId);
-            return saveTransaction(userId,testStep,decodedMessage,outgoingMessage);
+            return saveTransaction(userId,testStep,MessageUtils.prettyPrint(decodedMessage),outgoingMessage);
         } catch (UnsupportedEncodingException e) {
             logger.error("Unable to encode outgoing message: "+request.getMessage());
             e.printStackTrace();
