@@ -1,6 +1,10 @@
 package gov.nist.hit.erx.ws.client.utils;
 
+import gov.nist.hit.erx.ws.client.UnaSeparators;
+import gov.nist.hit.erx.ws.client.exception.SeparatorException;
 import org.apache.commons.io.Charsets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriUtils;
 
 import javax.xml.transform.OutputKeys;
@@ -29,6 +33,9 @@ import java.nio.charset.Charset;
  */
 public class MessageUtils {
 
+    static final Logger logger = LoggerFactory
+            .getLogger(MessageUtils.class);
+
     public static String prettyPrint(String message){
         if (message.startsWith("UNA") && message.length() >= 9) {
             message = message.replace("\n","");
@@ -56,11 +63,27 @@ public class MessageUtils {
     }
 
     public static String cleanToSend(String message) {
-        return message.replace("\n","");
+        UnaSeparators newUnaSeparators = new UnaSeparators();
+        newUnaSeparators.setDataElementsInACompositeDataElement("\u001C");
+        newUnaSeparators.setCompositeDataElements("\u001D");
+        newUnaSeparators.setDecimalNotation("\u002E");
+        newUnaSeparators.setReleaseIndicator("\u0020");
+        newUnaSeparators.setRepetitions("\u003F");
+        newUnaSeparators.setSegments("\u001E");
+        String cleanedMessage = null;
+        try {
+            cleanedMessage = UnaSeparators.replaceSeparatorsInMessage(message.replace("\n", ""), newUnaSeparators);
+        } catch (SeparatorException e) {
+            logger.error("Unable to clean the message. Failed to replace the separators.");
+            e.printStackTrace();
+            return message;
+        }
+        logger.info("Message cleaned to be sent: "+cleanedMessage);
+        return cleanedMessage;
     }
 
     public static String encodeMedHistory(String message) throws UnsupportedEncodingException {
-        return UriUtils.encodeQueryParam(message.replace("\n", ""), Charsets.UTF_8.displayName());
+        return UriUtils.encodeQueryParam(cleanToSend(message), Charsets.UTF_8.displayName());
     }
 
     public static String decodeMedHistory(String incomingMessage) throws UnsupportedEncodingException {
