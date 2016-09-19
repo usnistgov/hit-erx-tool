@@ -40,7 +40,7 @@ public class UrlEncodedWebServiceController extends WebServiceController {
             String encodedResponseMessage = MessageUtils.cleanToSend(super.message(decodedMessage, criteria));
             logger.info("Sending back encoded response: "+encodedResponseMessage);
             response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
-            return "request="+encodedResponseMessage;
+            return encodedResponseMessage;
         } catch (UnsupportedEncodingException e) {
             logger.error("Unable to decode the incoming message: "+message);
             e.printStackTrace();
