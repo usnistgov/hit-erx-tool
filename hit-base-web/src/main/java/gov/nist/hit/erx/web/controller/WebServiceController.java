@@ -15,7 +15,6 @@ import gov.nist.hit.erx.ws.client.Message;
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import hl7.v2.validation.vs.CodeUsage;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.xpath.operations.Bool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
