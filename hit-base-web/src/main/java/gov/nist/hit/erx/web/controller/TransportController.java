@@ -268,6 +268,11 @@ public abstract class TransportController {
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
                     "No System Under Test configuration info found");
+        //Get the replaceSeparators parameters for the response we send back
+        Map<String, String> taInitiator = config != null ? config.getTaInitiator() : null;
+        if(taInitiator!=null&&taInitiator.containsKey("replaceSeparators")){
+            sutInitiator.put("replaceSeparators",taInitiator.get("replaceSeparators"));
+        }
         return sutInitiator;
     }
 

@@ -62,28 +62,32 @@ public class MessageUtils {
         return message;
     }
 
-    public static String cleanToSend(String message) {
-        UnaSeparators newUnaSeparators = new UnaSeparators();
-        newUnaSeparators.setDataElementsInACompositeDataElement("\u001C");
-        newUnaSeparators.setCompositeDataElements("\u001D");
-        newUnaSeparators.setDecimalNotation("\u002E");
-        newUnaSeparators.setReleaseIndicator("\u0020");
-        newUnaSeparators.setRepetitions("\u003F");
-        newUnaSeparators.setSegments("\u001E");
-        String cleanedMessage = null;
-        try {
-            cleanedMessage = UnaSeparators.replaceSeparatorsInMessage(message.replace("\n", ""), newUnaSeparators);
-        } catch (SeparatorException e) {
-            logger.error("Unable to clean the message. Failed to replace the separators.");
-            e.printStackTrace();
-            return message;
+    public static String cleanToSend(String message,boolean replaceSeparators) {
+        if(replaceSeparators) {
+            UnaSeparators newUnaSeparators = new UnaSeparators();
+            newUnaSeparators.setDataElementsInACompositeDataElement("\u001C");
+            newUnaSeparators.setCompositeDataElements("\u001D");
+            newUnaSeparators.setDecimalNotation("\u002E");
+            newUnaSeparators.setReleaseIndicator("\u0020");
+            newUnaSeparators.setRepetitions("\u003F");
+            newUnaSeparators.setSegments("\u001E");
+            String cleanedMessage = null;
+            try {
+                cleanedMessage = UnaSeparators.replaceSeparatorsInMessage(message.replace("\n", ""), newUnaSeparators);
+            } catch (SeparatorException e) {
+                logger.error("Unable to clean the message. Failed to replace the separators.");
+                e.printStackTrace();
+                return message;
+            }
+            logger.info("Message cleaned to be sent: " + cleanedMessage);
+            return cleanedMessage;
+        } else {
+            return message.replace("\n", "");
         }
-        logger.info("Message cleaned to be sent: "+cleanedMessage);
-        return cleanedMessage;
     }
 
-    public static String encodeMedHistory(String message) throws UnsupportedEncodingException {
-        return UriUtils.encodeQueryParam(cleanToSend(message), Charsets.UTF_8.displayName());
+    public static String encodeMedHistory(String message,boolean replaceSeparators) throws UnsupportedEncodingException {
+        return UriUtils.encodeQueryParam(cleanToSend(message,replaceSeparators), Charsets.UTF_8.displayName());
     }
 
     public static String decodeMedHistory(String incomingMessage) throws UnsupportedEncodingException {

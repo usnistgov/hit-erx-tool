@@ -15,6 +15,7 @@ import gov.nist.hit.erx.ws.client.Message;
 import gov.nist.hit.erx.ws.client.utils.MessageUtils;
 import hl7.v2.validation.vs.CodeUsage;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.xpath.operations.Bool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,14 +90,16 @@ public abstract class WebServiceController {
                 Map<String, String> criteria = new HashMap<>();
                 criteria.put("username", username);
                 criteria.put("password", password);
+
                 return criteria;
             }
         }
         return null;
     }
 
-    public String message(String message,Map<String, String> criteria) throws TransportClientException, MessageParserException, UserNotFoundException {
+    public String message(String message,Map<String, String> criteria, String PROTOCOL, String DOMAIN) throws TransportClientException, MessageParserException, UserNotFoundException {
         if(criteria!=null){
+            logger.info("Message received for criteria "+criteria);
             //criteria.remove("password");
             Long userId = userConfigService.findUserIdByProperties(criteria);
             Long messageId = transportMessageService.findMessageIdByProperties(criteria);
@@ -139,8 +142,11 @@ public abstract class WebServiceController {
                     transaction.setOutgoing(MessageUtils.prettyPrint(content));
                 }
             }
+            Map<String, String> sutConfig = getSutInitiatorConfig(userId,PROTOCOL,DOMAIN);
+            Boolean replaceSeparators = Boolean.parseBoolean(sutConfig.get("replaceSeparators"));
+            logger.info("Reading sut configuration to check if a separator replacement is needed. Result: "+replaceSeparators+ "(Extracted from sut config: "+sutConfig+")");
             transactionService.save(transaction);
-            return MessageUtils.cleanToSend(transaction.getOutgoing());
+            return MessageUtils.cleanToSend(transaction.getOutgoing(), replaceSeparators);
         }
         return null;
     }
@@ -151,6 +157,11 @@ public abstract class WebServiceController {
         if (sutInitiator == null || sutInitiator.isEmpty())
             throw new gov.nist.hit.core.service.exception.TransportException(
                     "No System Under Test configuration info found");
+        //Get the replaceSeparators parameters for the response we send back
+        Map<String, String> taInitiator = config != null ? config.getTaInitiator() : null;
+        if(taInitiator!=null&&taInitiator.containsKey("replaceSeparators")){
+            sutInitiator.put("replaceSeparators",taInitiator.get("replaceSeparators"));
+        }
         return sutInitiator;
     }
 

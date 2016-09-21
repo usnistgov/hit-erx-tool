@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +30,7 @@ public class RestWebServiceController extends WebServiceController {
         logger.info("Message received : " + body);
         Map<String,String> criteria = getCriteriaFromBasicAuth(authorization);
         response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
-        return super.message(body, criteria);
+        return super.message(body, criteria,PROTOCOL,DOMAIN);
     }
 
 }

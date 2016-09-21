@@ -83,7 +83,8 @@ public class SurescriptTransportController extends TransportController {
             TestStep testStep = testStepService.findOne(testStepId);
             if (testStep == null)
                 throw new TestStepException("Unknown test step with id=" + testStepId);
-            String outgoingMessage = MessageUtils.cleanToSend(request.getMessage());
+            boolean replaceSeparators=Boolean.parseBoolean(request.getConfig().get("replaceSeparators"));
+            String outgoingMessage = MessageUtils.cleanToSend(request.getMessage(),replaceSeparators);
             String message = SurescriptUtils.addEnveloppe(outgoingMessage, testStep.getTestContext());
             String incoming = send(request,message);
             //TODO transform incoming

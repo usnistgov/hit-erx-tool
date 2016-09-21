@@ -72,11 +72,13 @@ public class RestTransportController extends TransportController {
     public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
         logger.info("Sending message  with user id=" + SessionContext.getCurrentUserId(session) + " and test step with id="
                 + request.getTestStepId());
+        logger.info("Config: "+request.getConfig());
         Long testStepId = request.getTestStepId();
         TestStep testStep = testStepService.findOne(testStepId);
         if (testStep == null)
             throw new TestStepException("Unknown test step with id=" + testStepId);
-        String outgoingMessage = MessageUtils.cleanToSend(request.getMessage());
+        boolean replaceSeparators=Boolean.parseBoolean(request.getConfig().get("replaceSeparators"));
+        String outgoingMessage = MessageUtils.cleanToSend(request.getMessage(),replaceSeparators);
         String incoming = send(request,outgoingMessage);
         Long userId = SessionContext.getCurrentUserId(session);
         parseIncomingMessage(incoming,testStep,userId);

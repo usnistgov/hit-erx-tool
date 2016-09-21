@@ -79,7 +79,8 @@ public class UrlEncodedTransportController extends TransportController {
             throw new TestStepException("Unknown test step with id=" + testStepId);
         String outgoingMessage = null;
         try {
-            outgoingMessage = MessageUtils.encodeMedHistory(request.getMessage());
+            boolean replaceSeparators=Boolean.parseBoolean(request.getConfig().get("replaceSeparators"));
+            outgoingMessage = MessageUtils.encodeMedHistory(request.getMessage(),replaceSeparators);
             StringBuilder body = new StringBuilder();
             body.append("request=");
             body.append(outgoingMessage);

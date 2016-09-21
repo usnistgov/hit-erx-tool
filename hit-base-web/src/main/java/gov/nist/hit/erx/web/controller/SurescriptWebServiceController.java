@@ -49,7 +49,7 @@ public class SurescriptWebServiceController extends WebServiceController {
         try {
             String message = SurescriptUtils.parseEnveloppe(body);
             Map<String,String> criteria = getCriteriaFromBasicAuth(authorization);
-            String outgoing = super.message(message, criteria);
+            String outgoing = super.message(message, criteria,PROTOCOL,DOMAIN);
             TestContext testContext = testStepService.findOne(testCaseExecutionUtils.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization))).getCurrentTestStepId()).getTestContext();
             response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
             return SurescriptUtils.addEnveloppe(outgoing, testContext);
