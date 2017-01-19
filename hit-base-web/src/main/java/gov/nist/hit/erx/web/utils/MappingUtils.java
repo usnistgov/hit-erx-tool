@@ -116,7 +116,9 @@ public class MappingUtils {
                 } else {
                     logger.error("Invalid mapping for test step " + testStep.getId());
                 }
-                dataToReplaceInMessage.put(dataMapping.getTarget().getField(),data);
+                if(!"".equals(data) || !dataMapping.getOptional()) {
+                    dataToReplaceInMessage.put(dataMapping.getTarget().getField(), data);
+                }
             }
         }
         if(dataToReplaceInMessage.size()>0) {
