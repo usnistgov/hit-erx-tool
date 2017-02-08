@@ -12,6 +12,7 @@ import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
 import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.web.utils.Utils;
 import gov.nist.hit.erx.ws.client.WebServiceClient;
+import hl7.v2.validation.vs.CodeUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,7 +125,11 @@ public abstract class TransportController {
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getUsername());
         config.put("password",
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : passwordService.getEncryptedPassword(user.getUsername()));
-        config.put("endpoint", Utils.getUrl(request) + "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message");
+        String endpoint = Utils.getUrl(request) + "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message";
+        if(endpoint.contains("psapps.nist.gov:7319")){
+            endpoint = endpoint.replace("psapps.nist.gov:7319","www-s.nist.gov");
+        }
+        config.put("endpoint", endpoint);
         return config;
     }
 
