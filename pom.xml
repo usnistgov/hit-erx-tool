@@ -84,7 +84,6 @@
 
 			</plugins>
 		</pluginManagement>
-		<finalName>erx-tool</finalName>
 	</build>
 
 </project>

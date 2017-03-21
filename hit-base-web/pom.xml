@@ -12,7 +12,7 @@
 	</parent>
 
 	<build>
-		<finalName>hit-base-tool</finalName>
+		<finalName>erx-tool</finalName>
 		<pluginManagement>
 			<plugins>
 				<plugin>
