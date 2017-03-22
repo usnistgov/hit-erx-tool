@@ -89,21 +89,26 @@ public abstract class WebServiceController {
                 Map<String, String> criteria = new HashMap<>();
                 criteria.put("username", username);
                 criteria.put("password", password);
-
+                logger.info("Criteria successfully found: "+criteria.toString());
                 return criteria;
+            } else {
+                logger.error("Malformed basic auth: "+authorization );
             }
+            return null;
         }
+        logger.error("Failed to read the basic auth header: "+authorization);
         return null;
     }
 
     public String message(String message,Map<String, String> criteria, String PROTOCOL, String DOMAIN) throws TransportClientException, MessageParserException, UserNotFoundException {
         if(criteria!=null){
-            logger.info("Message received for criteria "+criteria);
+            logger.info("Message received for criteria "+criteria+" and protocol "+PROTOCOL);
             //criteria.remove("password");
             Long userId = userConfigService.findUserIdByProperties(criteria);
             Long messageId = transportMessageService.findMessageIdByProperties(criteria);
             if(messageId==null){
-                return "Error : Listener not started for user "+criteria.get("username")+".";
+                logger.error("Error : Listener not started for user "+criteria.get("username")+" and protocol "+PROTOCOL+".");
+                return "Error : Listener not started for user "+criteria.get("username")+" and protocol "+PROTOCOL+".";
             }
             if(userId==null){
                 throw new UserNotFoundException();
@@ -145,7 +150,9 @@ public abstract class WebServiceController {
             Boolean replaceSeparators = Boolean.parseBoolean(sutConfig.get("replaceSeparators"));
             logger.info("Reading sut configuration to check if a separator replacement is needed. Result: "+replaceSeparators+ "(Extracted from sut config: "+sutConfig+")");
             transactionService.save(transaction);
-            return MessageUtils.cleanToSend(transaction.getOutgoing(), replaceSeparators);
+            String cleanMessage = MessageUtils.cleanToSend(transaction.getOutgoing(), replaceSeparators);
+            logger.info("Message cleaned to send back: "+cleanMessage);
+            return cleanMessage;
         }
         return null;
     }
@@ -153,14 +160,17 @@ public abstract class WebServiceController {
     private Map<String, String> getSutInitiatorConfig(Long userId, String PROTOCOL, String DOMAIN) {
         TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL, DOMAIN);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
-        if (sutInitiator == null || sutInitiator.isEmpty())
+        if (sutInitiator == null || sutInitiator.isEmpty()) {
+            logger.error("No System Under Test configuration info found for userId "+userId+" and the protocol "+PROTOCOL);
             throw new gov.nist.hit.core.service.exception.TransportException(
-                    "No System Under Test configuration info found");
+                "No System Under Test configuration info found");
+        }
         //Get the replaceSeparators parameters for the response we send back
         Map<String, String> taInitiator = config != null ? config.getTaInitiator() : null;
         if(taInitiator!=null&&taInitiator.containsKey("replaceSeparators")){
             sutInitiator.put("replaceSeparators",taInitiator.get("replaceSeparators"));
         }
+        logger.info("SUT configuration found for userId "+userId+" and the protocol "+PROTOCOL+": "+sutInitiator.toString());
         return sutInitiator;
     }
 
@@ -170,6 +180,7 @@ public abstract class WebServiceController {
         byte[] plainCredsBytes = plainCreds.getBytes();
         String base64Creds = DatatypeConverter.printBase64Binary(plainCredsBytes);
         response.setHeader("Authorization", "Basic " + base64Creds);
+        logger.info("Basic auth header for the response configured with credentials: "+plainCreds);
         return response;
     }
 }

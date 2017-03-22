@@ -43,7 +43,7 @@ public class MappingUtils {
     @Autowired
     protected TestCaseExecutionDataService testCaseExecutionDataService;
 
-    public void readDatasFromMessage(Message message, TestStep testStep, TestCaseExecution testCaseExecution){
+    public Map<String, String> readDatasFromMessage(Message message, TestStep testStep, TestCaseExecution testCaseExecution){
         MessageParser messageParser = null;
         if(testStep.getTestContext() instanceof EDITestContext){
             messageParser = new EdiMessageParser();
@@ -64,11 +64,13 @@ public class MappingUtils {
             try {
                 Map<String, String> datas = messageParser.readInMessage(message, dataToBeFound, testStep.getTestContext());
                 saveData(keysToFind,datas,testCaseExecution);
+                return datas;
             } catch (Exception e) {
                 logger.error(e.getMessage());
                 e.printStackTrace();
             }
         }
+        return null;
     }
 
     private void saveData(HashMap<TestStepFieldPair,String> keysToFind,Map<String, String> datas,TestCaseExecution testCaseExecution){

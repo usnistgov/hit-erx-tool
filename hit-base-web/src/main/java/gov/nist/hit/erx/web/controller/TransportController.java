@@ -135,12 +135,12 @@ public abstract class TransportController {
 
     public boolean startListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
-        logger.info("Starting listener");
         Long userId = SessionContext.getCurrentUserId(session);
         if (userId == null || (accountService.findOne(userId)) == null) {
             throw new UserNotFoundException();
         }
-        clearExchanges(userId,PROTOCOL,DOMAIN);
+        logger.info("Starting listener for userId: "+userId+" and protocol: "+PROTOCOL);
+        clearExchanges(userId, PROTOCOL, DOMAIN);
 
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
@@ -186,18 +186,18 @@ public abstract class TransportController {
 
     public boolean stopListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
-        logger.info("Stopping listener ");
         Long accountId = SessionContext.getCurrentUserId(session);
         if (accountId == null || (accountService.findOne(accountId)) == null) {
             throw new UserNotFoundException();
         }
+        logger.info("Stopping listener for userId: "+accountId+" and protocol: "+PROTOCOL);
         clearExchanges(accountId,PROTOCOL,DOMAIN);
         return true;
     }
 
     public Transaction searchTransaction(Map<String, String> criteria) {
         //We don't search criteria here as it's relative to a protocol
-        logger.info("Searching transaction...");
+        logger.info("Searching transaction with criteria: "+criteria.toString());
         //criteria.remove("password");
         Transaction transaction = transactionService.findOneByProperties(criteria);
         return transaction;
@@ -217,6 +217,7 @@ public abstract class TransportController {
                 messageContent = mappingUtils.writeDataInMessage(message, testStep, testCaseExecution);
             }
         }
+        logger.info("Response message successfully populated and ready to send back: "+messageContent);
         transportResponse.setOutgoingMessage(messageContent);
         return transportResponse;
     }
@@ -238,6 +239,7 @@ public abstract class TransportController {
     }
 
     public void parseIncomingMessage(String incomingMessage,TestStep testStep,Long accountId){
+        logger.info("Parsing incoming message: "+incomingMessage);
         String tmp = incomingMessage;
         try {
             incomingMessage = XmlUtil.prettyPrint(incomingMessage);
@@ -249,7 +251,13 @@ public abstract class TransportController {
         if (nextTestStep != null) {
             Message message2 = new Message();
             message2.setContent(incomingMessage);
-            mappingUtils.readDatasFromMessage(message2, nextTestStep, testCaseExecutionUtils.initTestCaseExecution(accountId, nextTestStep));
+            Map<String, String> data = mappingUtils.readDatasFromMessage(message2, nextTestStep,
+                testCaseExecutionUtils.initTestCaseExecution(accountId, nextTestStep));
+            if(data!=null) {
+                logger.info("Data extracted from the received message for the mapping: " + data.toString());
+            } else {
+                logger.info("No data extracted from the received message for the mapping.");
+            }
         }
     }
 
@@ -263,6 +271,7 @@ public abstract class TransportController {
             transaction.setOutgoing(outgoing);
             transaction.setIncoming(incoming);
             transactionService.save(transaction);
+            logger.info("Transaction successfully saved: {accountId:"+accountId+",testStepId:"+testStep.getPersistentId()+",incoming:"+incoming+",outgoing:"+outgoing+"}");
         }
         return transaction;
     }
@@ -270,13 +279,18 @@ public abstract class TransportController {
     private Map<String, String> getSutInitiatorConfig(Long accountId, String PROTOCOL, String DOMAIN) {
         TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(accountId, PROTOCOL, DOMAIN);
         Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
-        if (sutInitiator == null || sutInitiator.isEmpty())
+        if (sutInitiator == null || sutInitiator.isEmpty()) {
+            logger.error("SUT configuration not found for accountId "+accountId+" and protocol "+PROTOCOL);
             throw new gov.nist.hit.core.service.exception.TransportException(
-                    "No System Under Test configuration info found");
+                "No System Under Test configuration info found");
+        } else {
+            logger.info("SUT configuration found for accountId "+accountId+" and protocol "+PROTOCOL+" : "+sutInitiator.toString());
+        }
         //Get the replaceSeparators parameters for the response we send back
         Map<String, String> taInitiator = config != null ? config.getTaInitiator() : null;
         if(taInitiator!=null&&taInitiator.containsKey("replaceSeparators")){
             sutInitiator.put("replaceSeparators",taInitiator.get("replaceSeparators"));
+            logger.info("Adding the replaceSeparator parameter to the SUT config: "+sutInitiator.get("replaceSeparators"));
         }
         return sutInitiator;
     }
