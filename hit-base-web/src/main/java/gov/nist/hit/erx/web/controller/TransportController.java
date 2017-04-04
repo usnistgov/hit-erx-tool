@@ -1,6 +1,7 @@
 package gov.nist.hit.erx.web.controller;
 
 import gov.nist.auth.hit.core.domain.Account;
+import gov.nist.auth.hit.core.domain.TransportConfig;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.domain.util.XmlUtil;
@@ -141,7 +142,6 @@ public abstract class TransportController {
         }
         logger.info("Starting listener for userId: "+userId+" and protocol: "+PROTOCOL);
         clearExchanges(userId, PROTOCOL, DOMAIN);
-
         if (request.getResponseMessageId() == null)
             throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
 
@@ -164,6 +164,7 @@ public abstract class TransportController {
         Map<String, String> criteria = new HashMap<String, String>();
         criteria.put("username", config.get("username"));
         criteria.put("password", config.get("password"));
+        logger.info("Clearing all the previous transactions for criterias: "+criteria.toString());
         clearMessages(criteria);
         clearTransactions(criteria);
         return true;

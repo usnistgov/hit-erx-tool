@@ -1,6 +1,7 @@
 package gov.nist.hit.erx.web.controller;
 
 
+import gov.nist.auth.hit.core.domain.TransportConfig;
 import gov.nist.hit.core.api.SessionContext;
 import gov.nist.hit.core.domain.*;
 import gov.nist.hit.core.service.exception.TestStepException;
