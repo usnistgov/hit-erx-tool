@@ -98,12 +98,12 @@ public abstract class TransportController {
         if (transportConfig == null) {
             transportConfig = transportConfigService.create(PROTOCOL, DOMAIN);
             transportConfig.setUserId(userId);
-            Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request,PROTOCOL,DOMAIN);
             Map<String, String> taInitiatorConfig = taInitiatorConfig(user, request);
-            transportConfig.setSutInitiator(sutInitiatorConfig);
             transportConfig.setTaInitiator(taInitiatorConfig);
-            transportConfigService.save(transportConfig);
         }
+        Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request,PROTOCOL,DOMAIN);
+        transportConfig.setSutInitiator(sutInitiatorConfig);
+        transportConfigService.save(transportConfig);
         return transportConfig;
     }
 
