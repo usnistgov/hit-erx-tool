@@ -78,7 +78,7 @@ public class SurescriptTransportController extends TransportController {
     @RequestMapping(value = "/send", method = RequestMethod.POST)
     public Transaction send(@RequestBody TransportRequest request, HttpSession session) throws TransportClientException {
         Long userId = SessionContext.getCurrentUserId(session);
-        logger.info("Sending message with user ID="+userId+" and test step with id="
+        logger.info("Sending message with user id="+userId+" and test step with id="
                 + request.getTestStepId());
         try {
             Long testStepId = request.getTestStepId();
