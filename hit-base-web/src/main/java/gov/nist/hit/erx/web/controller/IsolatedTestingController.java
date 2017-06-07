@@ -61,7 +61,7 @@ public class IsolatedTestingController {
     @RequestMapping(value = "/testcases", method = RequestMethod.GET)
     public List<TestPlan> testCases() {
         logger.info("Fetching all isolated system test cases...");
-        List<TestPlan> testPlans = testPlanService.findAllByStage(TestingStage.ISOLATED);
+        List<TestPlan> testPlans = testPlanService.findShortAllByStage(TestingStage.ISOLATED);
         return testPlans;
     }
 
