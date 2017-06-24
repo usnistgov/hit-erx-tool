@@ -33,7 +33,7 @@ angular.module('cb')
 
 
 angular.module('cb')
-  .controller('CBExecutionCtrl', ['$scope', '$window', '$rootScope', 'CB', '$modal', 'TestExecutionClock', 'Endpoint', 'TestExecutionService', '$timeout', 'StorageService', 'User', 'ReportService', 'TestCaseDetailsService', '$compile', 'Transport', '$filter', 'SOAPEscaper', function ($scope, $window, $rootScope, CB, $modal, TestExecutionClock, Endpoint, TestExecutionService, $timeout, StorageService, User, ReportService, TestCaseDetailsService, $compile, Transport, $filter, SOAPEscaper) {
+  .controller('CBExecutionCtrl', ['$scope', '$window', '$rootScope', 'CB', '$modal', 'TestExecutionClock', 'Endpoint', 'TestExecutionService', '$timeout', 'StorageService', 'User', 'ReportService', 'TestCaseDetailsService', '$compile', 'Transport', '$filter', 'SOAPEscaper', 'MappingService', function ($scope, $window, $rootScope, CB, $modal, TestExecutionClock, Endpoint, TestExecutionService, $timeout, StorageService, User, ReportService, TestCaseDetailsService, $compile, Transport, $filter, SOAPEscaper, MappingService) {
     $scope.targ = "cb-executed-test-step";
     $scope.loading = false;
     $scope.error = null;
@@ -219,6 +219,7 @@ angular.module('cb')
           }
           StorageService.remove(StorageService.CB_LOADED_TESTSTEP_TYPE_KEY);
           StorageService.remove(StorageService.CB_LOADED_TESTSTEP_ID_KEY);
+          MappingService.clearRecords();
           $scope.executeTestCase($scope.testCase);
         }, function (error) {
           $scope.loadingExecution = false;
@@ -657,8 +658,8 @@ angular.module('cb')
               $scope.logger.log("Listener started.");
               var execute = function () {
                 var remaining = parseInt($scope.counterMax) - parseInt($scope.counter);
-                if( remaining % 60 === 0) {
-                  $scope.logger.log("Waiting for Inbound Message....Remaining time:" + (remaining/60) + "mn");
+                if( remaining % 20 === 0) {
+                  $scope.logger.log("Waiting for Inbound Message....Remaining time:" + (remaining) + "s");
                 }
                 ++$scope.counter;
 
