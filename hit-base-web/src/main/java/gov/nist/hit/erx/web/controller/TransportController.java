@@ -285,7 +285,7 @@ public abstract class TransportController {
             throw new gov.nist.hit.core.service.exception.TransportException(
                 "No System Under Test configuration info found");
         } else {
-            logger.info("SUT configuration found for accountId "+accountId+" and protocol "+PROTOCOL+" : "+sutInitiator.toString());
+            logger.info("SUT configuration found for userId "+accountId+" and protocol "+PROTOCOL+" : "+sutInitiator.toString());
         }
         //Get the replaceSeparators parameters for the response we send back
         Map<String, String> taInitiator = config != null ? config.getTaInitiator() : null;
