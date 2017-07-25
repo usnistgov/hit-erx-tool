@@ -42,13 +42,18 @@ public class SurescriptUtils {
         EdiMessageParser ediMessageParser = new EdiMessageParser();
         ArrayList<String> dataToRead = new ArrayList<>();
         String messageIDField = "UIB-030-01";
-        String toQualifierField = "UIB-060-01";
-        String fromQualifierField = "UIB-070-01";
+        String toQualifierField, fromQualifierField,toQualifierAttributeField, fromQualifierAttributeField;
+        toQualifierField = "UIB-070-01";
+        fromQualifierField = "UIB-060-01";
+        toQualifierAttributeField = "UIB-070-02";
+        fromQualifierAttributeField = "UIB-060-02";
         String sentTimeField1 = "UIB-080-01";
         String sentTimeField2 = "UIB-080-02";
         dataToRead.add(messageIDField);
         dataToRead.add(toQualifierField);
         dataToRead.add(fromQualifierField);
+        dataToRead.add(toQualifierAttributeField);
+        dataToRead.add(fromQualifierAttributeField);
         dataToRead.add(sentTimeField1);
         dataToRead.add(sentTimeField2);
         Map<String, String> dataRead = ediMessageParser.readInMessage(toBeParsedMessage, dataToRead, testContext);
@@ -60,24 +65,32 @@ public class SurescriptUtils {
         if (dataRead.containsKey(toQualifierField)) {
             toQualifier = dataRead.get(toQualifierField);
         }
+        String toQualifierAttribute = null;
+        if (dataRead.containsKey(toQualifierAttributeField)) {
+            toQualifierAttribute = dataRead.get(toQualifierAttributeField);
+        }
         String fromQualifier = null;
         if (dataRead.containsKey(fromQualifierField)) {
             fromQualifier = dataRead.get(fromQualifierField);
+        }
+        String fromQualifierAttribute = null;
+        if (dataRead.containsKey(fromQualifierAttributeField)) {
+            fromQualifierAttribute = dataRead.get(fromQualifierAttributeField);
         }
         String sentTime = null;
         if (dataRead.containsKey(sentTimeField1)&&dataRead.containsKey(sentTimeField2)) {
             sentTime = dataRead.get(sentTimeField1)+"'T'"+dataRead.get(sentTimeField2);
         }
-        return addEnveloppe(toBeParsedMessage.getContent(), messageId, toQualifier, fromQualifier, sentTime);
+        return addEnveloppe(toBeParsedMessage.getContent(), messageId, toQualifier, fromQualifier, toQualifierAttribute, fromQualifierAttribute, sentTime);
     }
 
-    public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier,String sentTime) throws Exception {
+    public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier, String toQualifierAttribute, String fromQualifierAttribute, String sentTime) throws Exception {
         //message = message.replace("\n","");
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
                 "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">" +
                 "    <Header>" +
-                "        <To Qualifier=\"P\">"+toQualifier+"</To>" +
-                "        <From Qualifier=\"D\">"+fromQualifier+"</From>" +
+                "        <To Qualifier=\""+toQualifierAttribute+"\">"+toQualifier+"</To>" +
+                "        <From Qualifier=\""+fromQualifierAttribute+"\">"+fromQualifier+"</From>" +
                 "        <MessageID>"+messageID+"</MessageID>" +
                 "        <SentTime>"+sentTime+"</SentTime>" +
                 "    </Header>" +
