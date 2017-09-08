@@ -1762,7 +1762,7 @@ angular.module('format').controller('SutInitiatorConfigCtrl', function ($scope, 
 
 
 angular.module('format').factory('TestExecutionService',
-  ['$q', '$http', '$rootScope', 'ReportService', 'TestCaseService', 'StorageService', function ($q, $http, $rootScope, ReportService, TestCaseService, StorageService) {
+  ['$q', '$http', '$rootScope', 'ReportService', 'TestCaseService', 'StorageService', 'TestStepService', function ($q, $http, $rootScope, ReportService, TestCaseService, StorageService,TestStepService) {
 
     var TestExecutionService = {
       resultOptions: [
@@ -1787,7 +1787,10 @@ angular.module('format').factory('TestExecutionService',
       testStepValidationReports: StorageService.get("testStepValidationReports") != null ? angular.fromJson(StorageService.get("testStepValidationReports")) : {},
       testStepExecutionMessages: StorageService.get("testStepExecutionMessages") != null ? angular.fromJson(StorageService.get("testStepExecutionMessages")) : {},
       testStepMessageTrees: StorageService.get("testStepMessageTrees") != null ? angular.fromJson(StorageService.get("testStepMessageTrees")) : {},
-      testStepCommentsChanged: {}
+      testStepCommentsChanged: {},
+      testStepCommentsChanges: {},
+      testCaseCommentsChanged: {},
+      testCaseCommentsChanges: {}
     };
 
 
@@ -1801,9 +1804,15 @@ angular.module('format').factory('TestExecutionService',
       TestExecutionService.testStepValidationReports = StorageService.get("testStepValidationReports") != null ? angular.fromJson(StorageService.get("testStepValidationReports")) : {};
       TestExecutionService.testStepExecutionMessages = StorageService.get("testStepExecutionMessages") != null ? angular.fromJson(StorageService.get("testStepExecutionMessages")) : {};
       TestExecutionService.testStepMessageTrees = StorageService.get("testStepMessageTrees") != null ? angular.fromJson(StorageService.get("testStepMessageTrees")) : {};
+
     };
 
     TestExecutionService.clear = function (testCaseId) {
+      TestExecutionService.clearAll();
+      return TestCaseService.clearRecords(testCaseId);
+    };
+
+    TestExecutionService.clearAll = function () {
       StorageService.remove("testStepValidationResults");
       StorageService.remove("testStepExecutionStatuses");
       StorageService.remove("testCaseExecutionStatuses");
@@ -1824,8 +1833,22 @@ angular.module('format').factory('TestExecutionService',
       TestExecutionService.testStepMessageTrees = {};
       TestExecutionService.testStepValidationReportObjects = {};
       TestExecutionService.testStepCommentsChanged = {};
+      TestExecutionService.testStepCommentsChanges = {};
+      TestExecutionService.testCaseCommentsChanged = {};
+      TestExecutionService.testCaseCommentsChanges = {};
+     };
+
+
+    TestExecutionService.clearTestCase = function (testCaseId) {
+      TestExecutionService.clearAll();
       return TestCaseService.clearRecords(testCaseId);
     };
+
+    TestExecutionService.clearTestStep = function (testCaseId) {
+      TestExecutionService.clearAll();
+      return TestStepService.clearRecords(testCaseId);
+    };
+
 
 
     TestExecutionService.initTestStep = function (testStep) {
