@@ -83,7 +83,6 @@ public class RestTransportController extends TransportController {
         logger.info("Cleaning message to send (replace separators: "+String.valueOf(replaceSeparators));
         String outgoingMessage = MessageUtils.cleanToSend(request.getMessage(),replaceSeparators);
         String incoming = send(request,outgoingMessage);
-        logger.info("Message received: "+incoming);
         parseIncomingMessage(incoming,testStep,userId);
         return saveTransaction(userId,testStep,incoming,outgoingMessage);
     }

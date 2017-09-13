@@ -27,8 +27,12 @@ public class RestWebServiceController extends WebServiceController {
 
     @RequestMapping(value = "/message", method = RequestMethod.POST,produces = "text/xml")
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody String body, HttpServletRequest request,HttpServletResponse response) throws TransportClientException, MessageParserException, UserNotFoundException {
-        logger.info("Message received : " + body);
         Map<String,String> criteria = getCriteriaFromBasicAuth(authorization);
+        String username = "";
+        if(criteria.containsKey("username")){
+            username = criteria.get("username");
+        }
+        logger.info("Message received for user \""+username+"\" : " + body);
         response = super.setBasicAuth(criteria, response,PROTOCOL,DOMAIN);
         return super.message(body, criteria,PROTOCOL,DOMAIN);
     }

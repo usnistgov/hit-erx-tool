@@ -92,7 +92,6 @@ public class SurescriptTransportController extends TransportController {
             String message = SurescriptUtils.addEnveloppe(outgoingMessage, testStep.getTestContext());
             String incoming = send(request,message);
             String edifact;
-            logger.info("Message received: "+incoming);
             if(incoming!=null) {
                  edifact = SurescriptUtils.parseEnveloppe(incoming);
                 logger.info("Successfully parsed the surescript enveloppe: "+incoming);

@@ -35,8 +35,12 @@ public class UrlEncodedWebServiceController extends WebServiceController {
     public String message(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestParam("request") String message, HttpServletRequest request,HttpServletResponse response) {
         try {
             String decodedMessage= UriUtils.decode(message, Charsets.UTF_8.displayName());
-            logger.info("Message received : " + decodedMessage);
             Map<String, String> criteria =  getCriteriaFromBasicAuth(authorization);
+            String username = "";
+            if(criteria.containsKey("username")){
+                username = criteria.get("username");
+            }
+            logger.info("Message received for user \""+username+"\" : " + decodedMessage);
             //String encodedResponseMessage = MessageUtils.cleanToSend(super.message(decodedMessage, criteria),Boolean.parseBoolean(criteria.get("replaceSeparators")));
             String encodedResponseMessage = super.message(decodedMessage, criteria,PROTOCOL,DOMAIN);
             logger.info("Sending back encoded response: "+encodedResponseMessage);
