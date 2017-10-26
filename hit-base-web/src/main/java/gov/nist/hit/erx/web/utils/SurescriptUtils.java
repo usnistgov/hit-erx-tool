@@ -42,11 +42,13 @@ public class SurescriptUtils {
         EdiMessageParser ediMessageParser = new EdiMessageParser();
         ArrayList<String> dataToRead = new ArrayList<>();
         String messageIDField = "UIB-030-01";
-        String toQualifierField, fromQualifierField,toQualifierAttributeField, fromQualifierAttributeField;
+        String toQualifierField, fromQualifierField,toQualifierAttributeField, fromQualifierAttributeField, relatesToMessageIDField, prescriberOrderNumberField;
         toQualifierField = "UIB-070-01";
         fromQualifierField = "UIB-060-01";
         toQualifierAttributeField = "UIB-070-02";
         fromQualifierAttributeField = "UIB-060-02";
+        relatesToMessageIDField = "UIB-030-02";
+        prescriberOrderNumberField = "UIH-030-01";
         String sentTimeField1 = "UIB-080-01";
         String sentTimeField2 = "UIB-080-02";
         dataToRead.add(messageIDField);
@@ -54,6 +56,8 @@ public class SurescriptUtils {
         dataToRead.add(fromQualifierField);
         dataToRead.add(toQualifierAttributeField);
         dataToRead.add(fromQualifierAttributeField);
+        dataToRead.add(relatesToMessageIDField);
+        dataToRead.add(prescriberOrderNumberField);
         dataToRead.add(sentTimeField1);
         dataToRead.add(sentTimeField2);
         Map<String, String> dataRead = ediMessageParser.readInMessage(toBeParsedMessage, dataToRead, testContext);
@@ -81,10 +85,17 @@ public class SurescriptUtils {
         if (dataRead.containsKey(sentTimeField1)&&dataRead.containsKey(sentTimeField2)) {
             sentTime = dataRead.get(sentTimeField1)+"'T'"+dataRead.get(sentTimeField2);
         }
-        return addEnveloppe(toBeParsedMessage.getContent(), messageId, toQualifier, fromQualifier, toQualifierAttribute, fromQualifierAttribute, sentTime);
+        String relatesToMessageID = "", prescriberOrderNumber = "";
+        if (dataRead.containsKey(relatesToMessageIDField) && !dataRead.get(relatesToMessageIDField).isEmpty()){
+            relatesToMessageID = "<RelatesToMessageID>"+dataRead.get(relatesToMessageIDField)+"</RelatesToMessageID>";
+        }
+        if (dataRead.containsKey(prescriberOrderNumberField) && !dataRead.get(prescriberOrderNumberField).isEmpty()){
+            prescriberOrderNumber = "<PrescriberOrderNumber>"+dataRead.get(prescriberOrderNumberField)+"</PrescriberOrderNumber>";
+        }
+        return addEnveloppe(toBeParsedMessage.getContent(), messageId, toQualifier, fromQualifier, toQualifierAttribute, fromQualifierAttribute, relatesToMessageID, prescriberOrderNumber, sentTime);
     }
 
-    public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier, String toQualifierAttribute, String fromQualifierAttribute, String sentTime) throws Exception {
+    public static String addEnveloppe(String message, String messageID,String toQualifier,String fromQualifier, String toQualifierAttribute, String fromQualifierAttribute, String relatesToMessageID, String prescriberOrderNumber, String sentTime) throws Exception {
         //message = message.replace("\n","");
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
                 "<Message xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"010\" release=\"006\" xmlns=\"http://www.ncpdp.org/schema/SCRIPT\">" +
@@ -93,6 +104,8 @@ public class SurescriptUtils {
                 "        <From Qualifier=\""+fromQualifierAttribute+"\">"+fromQualifier+"</From>" +
                 "        <MessageID>"+messageID+"</MessageID>" +
                 "        <SentTime>"+sentTime+"</SentTime>" +
+                        relatesToMessageID +
+                        prescriberOrderNumber +
                 "    </Header>" +
                 "    <Body>" +
                 "<EDIFACTMessage>" +
