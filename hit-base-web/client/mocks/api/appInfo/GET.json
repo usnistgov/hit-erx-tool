@@ -1,0 +1,30 @@
+{
+  "id": 63,
+  "url": "https://hl7v2-iz-r1.5-testing.nist.gov:8098/iztool",
+  "version": "1.7.2",
+  "date": "1508335198856",
+  "options": {
+    "AUTHENTICATION_REQUIRED": true,
+    "COMPANY_REQUIRED": true
+  },
+  "name": "Immunization Test Suite",
+  "domain": "",
+  "header": "",
+  "adminEmails": [
+    "robert.snelick@nist.gov",
+    "haffo@nist.gov"
+  ],
+  "homeTitle": "Welcome to the NIST Immunization Test Suite!",
+  "messageContentInfo":"sddsd",
+  "csrfToken": null,
+  "rsbVersion": "1.7.2",
+  "apiDocsPath": "/apidocs",
+  "mailFrom": "hit-testing@nist.gov",
+  "registrationTitle": "Notice to Applicant Regarding Tool Terms of Use",
+  "registrationAgreement": "Application for the use of the Immunization Tool does not guarantee that the applicant will be granted approval for use by the National Institute of Standards and Technology (NIST).The Immunization Tool software is hosted on a NIST server, and your information will not be visible to users other than NIST staff and yourselves. Information provided in the Immunization Tool does not imply NIST endorsement of any particular product, service, organization, company, information provider, or content. This software was developed at the NIST by employees of the Federal Government in the course of their official duties. Pursuant to title 17 Section 105 of the United States Code, this software is not subject to copyright protection and is in the public domain. NIST assumes no responsibility whatsoever for its use by other parties, and makes no guarantees, expressed or implied, about its quality, reliability, or any other characteristic. We would appreciate acknowledgment if the software is used. The outcome of the use of Tool can be redistributed and/or modified freely provided that any derivative works bear some notice that they are derived from it, and any modified versions bear some notice that they have been modified.",
+  "registrationSubmittedContent": "Thank you for registering to the NIST Immunization Tool. You can start using the tool right away.",
+  "registrationSubmittedTitle": "Application Submitted successfully!",
+  "registrationAcceptanceTitle": "I have read the Notice to Applicant and Accept the Terms of Use for the Immunization Tool",
+  "uploadMaxSize": "10MB",
+  "uploadContentTypes": "application/xml,text/xml,text/plain"
+}

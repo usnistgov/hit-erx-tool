@@ -676,6 +676,10 @@ angular.module('main').controller('MainCtrl',
             return '';
         };
 
+
+
+
+
     });
 
 angular.module('main').controller('LoginCtrl', ['$scope', '$modalInstance', 'user', function ($scope, $modalInstance, user) {
@@ -757,5 +761,15 @@ angular.module('main').controller('ValidationResultDetailsCtrl', function ($scop
     $scope.cancel = function () {
         $modalInstance.dismiss('cancel');
     };
+});
+
+
+angular.module('main').controller('ConfirmDialogCtrl', function ($scope, $modalInstance) {
+  $scope.confirm = function () {
+    $modalInstance.close(true);
+  };
+  $scope.cancel = function () {
+    $modalInstance.dismiss('cancel');
+  };
 });
 
