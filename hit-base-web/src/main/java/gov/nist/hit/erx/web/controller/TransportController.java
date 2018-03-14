@@ -13,14 +13,14 @@ import gov.nist.hit.erx.web.utils.TestCaseExecutionUtils;
 import gov.nist.hit.erx.web.utils.TestStepUtils;
 import gov.nist.hit.erx.web.utils.Utils;
 import gov.nist.hit.erx.ws.client.WebServiceClient;
-import hl7.v2.validation.vs.CodeUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -44,7 +44,7 @@ import java.util.Random;
  */
 
 
-
+@PropertySource(value = {"classpath:app-config.properties"})
 @Controller
 public abstract class TransportController {
 
@@ -84,6 +84,9 @@ public abstract class TransportController {
 
     @Autowired
     protected PasswordService passwordService;
+
+    @Value("${app.transport.baseUrl:null}")
+    private String transportBaseUrl;
 
     public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
             throws UserNotFoundException {
@@ -126,7 +129,13 @@ public abstract class TransportController {
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : user.getUsername());
         config.put("password",
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : passwordService.getEncryptedPassword(user.getUsername()));
-        String endpoint = Utils.getUrl(request) + "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message";
+        String endpoint = "";
+        if(transportBaseUrl == null) {
+            endpoint = Utils.getUrl(request);
+        } else {
+            endpoint = transportBaseUrl;
+        }
+        endpoint += "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message";
         if(endpoint.contains("psapps.nist.gov:7319")){
             endpoint = endpoint.replace("psapps.nist.gov:7319","www-s.nist.gov");
         }
