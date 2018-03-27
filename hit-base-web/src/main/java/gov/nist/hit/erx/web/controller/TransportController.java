@@ -85,7 +85,7 @@ public abstract class TransportController {
     @Autowired
     protected PasswordService passwordService;
 
-    @Value("${app.transport.baseUrl:null}")
+    @Value("${app.transport.baseUrl:#{null}}")
     private String transportBaseUrl;
 
     public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
@@ -130,7 +130,7 @@ public abstract class TransportController {
         config.put("password",
                 user.isGuestAccount() ? "vendor_" + user.getId() + "_" + token : passwordService.getEncryptedPassword(user.getUsername()));
         String endpoint = "";
-        if(transportBaseUrl == null) {
+        if(transportBaseUrl == null || transportBaseUrl == "null") {
             endpoint = Utils.getUrl(request);
         } else {
             endpoint = transportBaseUrl;
