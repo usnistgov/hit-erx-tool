@@ -477,6 +477,26 @@ angular.module('format').factory('TestStepService', function ($filter, $q, $http
 
 });
 
+angular.module('format').factory('MappingService', function ($filter, $q, $http) {
+  var MappingService = function () {
+  };
+
+  MappingService.clearRecords = function () {
+    var delay = $q.defer();
+    $http.post('api/mapping/cleanRecords').then(
+      function (object) {
+        //Do nothing
+      },
+      function (response) {
+        delay.reject(response.data);
+      }
+    );
+  };
+
+  return MappingService;
+
+});
+
 angular.module('format').factory('TestCaseService', function ($filter, $q, $http) {
   var TestCaseService = function () {
 
