@@ -23,3 +23,7 @@ hit-base-web/target
 hit-base-ws/target
 hit-base-web/.settings
 hit-base-service/target
+
+#IntelliJ
+.idea
+*.iml
