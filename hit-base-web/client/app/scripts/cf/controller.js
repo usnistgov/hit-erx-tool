@@ -138,7 +138,7 @@ angular.module('cf')
                     if ($scope.testPlans.length > 0) {
                         if ($scope.testPlans.length === 1) {
                             targetId = $scope.testPlans[0].id;
-                        }else {
+                        } else {
                             var previousTpId = StorageService.get(StorageService.CF_SELECTED_TESTPLAN_ID_KEY);
                             targetId = previousTpId == undefined || previousTpId == null ? "" : previousTpId;
                             if (previousTpId != null && previousTpId != undefined && previousTpId != "") {
@@ -312,8 +312,8 @@ angular.module('cf')
             $scope.initTesting();
         });
 
-        $scope.$on('event:cf:execute', function (event,scope, cat, group) {
-            $scope.selectedScope.key = scope && scope != null && (scope === 'USER' || scope === 'GLOBAL')? scope : $scope.testPlanScopes[0].key;
+        $scope.$on('event:cf:execute', function (event, scope, cat, group) {
+            $scope.selectedScope.key = scope && scope != null && (scope === 'USER' || scope === 'GLOBAL') ? scope : $scope.testPlanScopes[0].key;
             if (group && group != null) {
                 $scope.selectedTP.id = group;
                 StorageService.set(StorageService.CF_SELECTED_TESTPLAN_ID_KEY, group);
@@ -615,14 +615,18 @@ angular.module('cf')
                     var content = StorageService.get(StorageService.CF_EDITOR_CONTENT_KEY) == null ? '' : StorageService.get(StorageService.CF_EDITOR_CONTENT_KEY);
                     $scope.nodelay = true;
                     $scope.mError = null;
-                    $scope.cf.editor = ServiceDelegator.getEditor($scope.testCase.testContext.format);
-                    $scope.cf.editor.instance = $scope.editor;
-                    $scope.cf.cursor = ServiceDelegator.getCursor($scope.testCase.testContext.format);
-                    TestStepService.clearRecords($scope.testCase.id);
-                    if ($scope.editor) {
-                        $scope.editor.doc.setValue(content);
-                        $scope.execute();
-                    }
+                    $timeout(function () {
+                        $scope.initCodemirror();
+                        $scope.refreshEditor();
+                        $scope.cf.editor = ServiceDelegator.getEditor($scope.testCase.testContext.format);
+                        $scope.cf.editor.instance = $scope.editor;
+                        $scope.cf.cursor = ServiceDelegator.getCursor($scope.testCase.testContext.format);
+                        TestStepService.clearRecords($scope.testCase.id);
+                        if ($scope.editor) {
+                            $scope.editor.doc.setValue(content);
+                            $scope.execute();
+                        }
+                    }, 1000);
                 }
             });
 
