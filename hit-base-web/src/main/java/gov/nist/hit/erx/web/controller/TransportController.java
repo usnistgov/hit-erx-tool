@@ -7,7 +7,6 @@ import java.util.Random;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.xml.ws.WebServiceClient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +91,7 @@ public abstract class TransportController {
 
 	@Autowired
 	@Qualifier("WebServiceClient")
-	protected WebServiceClient webServiceClient;
+	protected gov.nist.hit.erx.ws.client.WebServiceClient webServiceClient;
 
 	@Autowired
 	protected AccountService accountService;
