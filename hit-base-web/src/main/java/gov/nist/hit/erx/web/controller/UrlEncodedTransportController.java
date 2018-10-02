@@ -39,25 +39,24 @@ public class UrlEncodedTransportController extends TransportController {
 
 	static final Logger logger = LoggerFactory.getLogger(UrlEncodedTransportController.class);
 
-	private final static String DOMAIN = "erx";
 	private final static String PROTOCOL = "urlencoded";
 
 	@RequestMapping(value = "/transport/{domain}/urlencoded/configs", method = RequestMethod.POST)
 	public TransportConfig configs(HttpSession session, HttpServletRequest request,
 			@PathVariable("domain") String domain) throws UserNotFoundException {
-		return configs(session, request, PROTOCOL, DOMAIN);
+		return configs(session, request, PROTOCOL, domain);
 	}
 
 	@RequestMapping(value = "/transport/{domain}/urlencoded/startListener", method = RequestMethod.POST)
 	public boolean startListener(@RequestBody TransportRequest request, HttpSession session,
 			@PathVariable("domain") String domain) throws UserNotFoundException {
-		return startListener(request, session, PROTOCOL, DOMAIN);
+		return startListener(request, session, PROTOCOL, domain);
 	}
 
 	@RequestMapping(value = "/transport/{domain}/urlencoded/stopListener", method = RequestMethod.POST)
 	public boolean stopListener(@RequestBody TransportRequest request, HttpSession session,
 			@PathVariable("domain") String domain) throws UserNotFoundException {
-		return stopListener(request, session, PROTOCOL, DOMAIN);
+		return stopListener(request, session, PROTOCOL, domain);
 	}
 
 	@RequestMapping(value = "/transport/{domain}/urlencoded/searchTransaction", method = RequestMethod.POST)
@@ -66,6 +65,8 @@ public class UrlEncodedTransportController extends TransportController {
 		Map<String, String> criteria = new HashMap<String, String>();
 		criteria.put("username", request.getConfig().get("username"));
 		criteria.put("password", request.getConfig().get("password"));
+		criteria.put("domain", domain);
+		criteria.put("protocol", PROTOCOL);
 		return searchTransaction(criteria);
 	}
 
