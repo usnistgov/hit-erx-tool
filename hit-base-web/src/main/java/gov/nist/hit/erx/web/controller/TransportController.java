@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Controller;
 
 import gov.nist.auth.hit.core.domain.Account;
 import gov.nist.auth.hit.core.domain.TransportConfig;
@@ -60,7 +59,6 @@ import gov.nist.hit.erx.web.utils.Utils;
  */
 
 @PropertySource(value = { "classpath:app-config.properties" })
-@Controller
 public abstract class TransportController {
 
 	static final Logger logger = LoggerFactory.getLogger(TransportController.class);
@@ -102,7 +100,7 @@ public abstract class TransportController {
 	@Value("${app.transport.baseUrl:#{null}}")
 	private String transportBaseUrl;
 
-	public TransportConfig configs(HttpSession session, HttpServletRequest request, String PROTOCOL, String DOMAIN)
+	public TransportConfig configs(HttpSession session, HttpServletRequest request, String protocol, String domain)
 			throws UserNotFoundException {
 		logger.info("Fetching user configuration information ... ");
 		Long userId = SessionContext.getCurrentUserId(session);
@@ -110,15 +108,15 @@ public abstract class TransportController {
 		if (userId == null || (user = accountService.findOne(userId)) == null) {
 			throw new UserNotFoundException();
 		}
-		TransportConfig transportConfig = transportConfigService.findOneByUserAndProtocolAndDomain(userId, PROTOCOL,
-				DOMAIN);
+		TransportConfig transportConfig = transportConfigService.findOneByUserAndProtocolAndDomain(userId, protocol,
+				domain);
 		if (transportConfig == null) {
-			transportConfig = transportConfigService.create(PROTOCOL, DOMAIN);
+			transportConfig = transportConfigService.create(protocol, domain);
 			transportConfig.setUserId(userId);
 			Map<String, String> taInitiatorConfig = taInitiatorConfig(user, request);
 			transportConfig.setTaInitiator(taInitiatorConfig);
 		}
-		Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request, PROTOCOL, DOMAIN);
+		Map<String, String> sutInitiatorConfig = sutInitiatorConfig(user, request, protocol, domain);
 		transportConfig.setSutInitiator(sutInitiatorConfig);
 		transportConfigService.save(transportConfig);
 		return transportConfig;
@@ -133,8 +131,8 @@ public abstract class TransportController {
 		return config;
 	}
 
-	private Map<String, String> sutInitiatorConfig(Account user, HttpServletRequest request, String PROTOCOL,
-			String DOMAIN) throws UserNotFoundException {
+	private Map<String, String> sutInitiatorConfig(Account user, HttpServletRequest request, String protocol,
+			String domain) throws UserNotFoundException {
 		logger.info("Creating user sut initiator config information ... ");
 		Map<String, String> config = new HashMap<String, String>();
 		int token = new Random().nextInt(999);
@@ -147,29 +145,31 @@ public abstract class TransportController {
 		} else {
 			endpoint = transportBaseUrl;
 		}
-		endpoint += "/api/wss/" + DOMAIN + "/" + PROTOCOL + "/message";
+		endpoint += "/api/wss/" + domain + "/" + protocol + "/message";
 		if (endpoint.contains("psapps.nist.gov:7319")) {
 			endpoint = endpoint.replace("psapps.nist.gov:7319", "www-s.nist.gov");
 		}
 		config.put("endpoint", endpoint);
+		config.put("protocol", protocol);
+		config.put("domain", domain);
 		return config;
 	}
 
-	public boolean startListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
+	public boolean startListener(TransportRequest request, HttpSession session, String protocol, String domain)
 			throws UserNotFoundException {
 		Long userId = SessionContext.getCurrentUserId(session);
 		if (userId == null || (accountService.findOne(userId)) == null) {
 			throw new UserNotFoundException();
 		}
-		logger.info("Starting listener for userId: " + userId + " and protocol: " + PROTOCOL);
-		clearExchanges(userId, PROTOCOL, DOMAIN);
+		logger.info("Starting listener for userId: " + userId + " and protocol: " + protocol);
+		clearExchanges(userId, protocol, domain);
 		if (request.getResponseMessageId() == null)
 			throw new gov.nist.hit.core.service.exception.TransportException("Response message not found");
 
 		TransportMessage transportMessage = new TransportMessage();
 		transportMessage.setMessageId(request.getResponseMessageId());
 		Map<String, String> config = new HashMap<String, String>();
-		config.putAll(getSutInitiatorConfig(userId, PROTOCOL, DOMAIN));
+		config.putAll(getSutInitiatorConfig(userId, protocol, domain));
 		transportMessage.setProperties(config);
 		transportMessageService.save(transportMessage);
 		TestStep testStep = testStepService.findOne(request.getTestStepId());
@@ -180,11 +180,13 @@ public abstract class TransportController {
 		return true;
 	}
 
-	private boolean clearExchanges(Long userId, String PROTOCOL, String DOMAIN) {
-		Map<String, String> config = getSutInitiatorConfig(userId, PROTOCOL, DOMAIN);
+	private boolean clearExchanges(Long userId, String protocol, String domain) {
+		Map<String, String> config = getSutInitiatorConfig(userId, protocol, domain);
 		Map<String, String> criteria = new HashMap<String, String>();
 		criteria.put("username", config.get("username"));
 		criteria.put("password", config.get("password"));
+		criteria.put("protocol", protocol);
+		criteria.put("domain", domain);
 		logger.info("Clearing all the previous transactions for criterias: " + criteria.toString());
 		clearMessages(criteria);
 		clearTransactions(criteria);
@@ -205,14 +207,14 @@ public abstract class TransportController {
 		}
 	}
 
-	public boolean stopListener(TransportRequest request, HttpSession session, String PROTOCOL, String DOMAIN)
+	public boolean stopListener(TransportRequest request, HttpSession session, String protocol, String domain)
 			throws UserNotFoundException {
 		Long accountId = SessionContext.getCurrentUserId(session);
 		if (accountId == null || (accountService.findOne(accountId)) == null) {
 			throw new UserNotFoundException();
 		}
-		logger.info("Stopping listener for userId: " + accountId + " and protocol: " + PROTOCOL);
-		clearExchanges(accountId, PROTOCOL, DOMAIN);
+		logger.info("Stopping listener for userId: " + accountId + " and protocol: " + protocol);
+		clearExchanges(accountId, protocol, domain);
 		return true;
 	}
 
@@ -299,15 +301,15 @@ public abstract class TransportController {
 		return transaction;
 	}
 
-	private Map<String, String> getSutInitiatorConfig(Long accountId, String PROTOCOL, String DOMAIN) {
-		TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(accountId, PROTOCOL, DOMAIN);
+	private Map<String, String> getSutInitiatorConfig(Long accountId, String protocol, String domain) {
+		TransportConfig config = transportConfigService.findOneByUserAndProtocolAndDomain(accountId, protocol, domain);
 		Map<String, String> sutInitiator = config != null ? config.getSutInitiator() : null;
 		if (sutInitiator == null || sutInitiator.isEmpty()) {
-			logger.error("SUT configuration not found for accountId " + accountId + " and protocol " + PROTOCOL);
+			logger.error("SUT configuration not found for accountId " + accountId + " and protocol " + protocol);
 			throw new gov.nist.hit.core.service.exception.TransportException(
 					"No System Under Test configuration info found");
 		} else {
-			logger.info("SUT configuration found for userId " + accountId + " and protocol " + PROTOCOL + " : "
+			logger.info("SUT configuration found for userId " + accountId + " and protocol " + protocol + " : "
 					+ sutInitiator.toString());
 		}
 		// Get the replaceSeparators parameters for the response we send back
