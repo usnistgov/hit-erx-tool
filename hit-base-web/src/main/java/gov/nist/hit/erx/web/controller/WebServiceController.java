@@ -155,7 +155,7 @@ public abstract class WebServiceController {
 					transaction.setOutgoing(MessageUtils.prettyPrint(content));
 				}
 			}
-			Map<String, String> sutConfig = getSutInitiatorConfig(userId, PROTOCOL, DOMAIN);
+			Map<String, String> sutConfig = getSutInitiatorConfig(userId, protocol, domain);
 			Boolean replaceSeparators = Boolean.parseBoolean(sutConfig.get("replaceSeparators"));
 			logger.info("Reading sut configuration to check if a separator replacement is needed. Result: "
 					+ replaceSeparators + "(Extracted from sut config: " + sutConfig + ")");
