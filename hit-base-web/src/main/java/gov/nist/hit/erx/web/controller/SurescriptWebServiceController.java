@@ -56,6 +56,8 @@ public class SurescriptWebServiceController extends WebServiceController {
 		try {
 			String message = SurescriptUtils.parseEnveloppe(body);
 			Map<String, String> criteria = getCriteriaFromBasicAuth(authorization);
+			criteria.put("domain", domain);
+			criteria.put("protocol", PROTOCOL);
 			String outgoing = super.message(message, criteria, PROTOCOL, domain);
 			TestContext testContext = testStepService.findOne(testCaseExecutionUtils
 					.findOne(userConfigService.findUserIdByProperties(getCriteriaFromBasicAuth(authorization)))
